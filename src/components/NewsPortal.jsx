@@ -7,7 +7,7 @@ import NewsCard, { Thumbnail } from './portal/NewsCard';
 import Sidebar from './portal/Sidebar';
 import Footer from './portal/Footer';
 
-function NewsPortal({ navigate, currentCategory, routeMap }) {
+function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
   const [articles, setArticles] = useState([]);
   const [tickerItems, setTickerItems] = useState([]);
   const [videos, setVideos] = useState([]);
@@ -165,6 +165,14 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
   const techNews = articles.filter(a => a.category === 'ತಂತ್ರಜ್ಞಾನ');
   const healthNews = articles.filter(a => a.category === 'ಆರೋಗ್ಯ');
 
+  const selectedArticle = articleId ? articles.find(a => String(a.id) === String(articleId)) : null;
+
+  const handleArticleClick = (id) => {
+    setSearchQuery('');
+    navigate(`/news/${id}`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Handle category navigation redirects
   const handleCategorySelect = (category) => {
     setSelectedCategory(category);
@@ -199,7 +207,65 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
 
       <div className="main-wrap">
         <main>
-          {selectedCategory === 'ಮುಖಪುಟ' && searchQuery === '' ? (
+          {articleId && !selectedArticle ? (
+            <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--muted)', background: '#fff', border: '1px solid var(--border)', borderRadius: '5px' }}>
+              <h3>ಸುದ್ದಿ ಲೋಡ್ ಆಗುತ್ತಿದೆ ಅಥವಾ ಲಭ್ಯವಿಲ್ಲ...</h3>
+              <button className="back-btn" onClick={() => handleCategorySelect('ಮುಖಪುಟ')} style={{ marginTop: '16px' }}>
+                ← ಮುಖಪುಟಕ್ಕೆ ಮರಳಿ
+              </button>
+            </div>
+          ) : selectedArticle ? (
+            /* ━━━━━━━━━━━━━━━━━━ ARTICLE DETAIL PAGE ━━━━━━━━━━━━━━━━━━ */
+            <div className="article-detail-wrap">
+              <button className="back-btn" onClick={() => handleCategorySelect(selectedArticle.category || 'ಮುಖಪುಟ')}>
+                ← {selectedArticle.category || 'ಮುಖಪುಟ'} ವರ್ಗಕ್ಕೆ ಹಿಂತಿರುಗಿ
+              </button>
+              
+              <div>
+                <span 
+                  className="badge-cat" 
+                  style={{ cursor: 'pointer', marginBottom: '10px', display: 'inline-block' }}
+                  onClick={() => handleCategorySelect(selectedArticle.category)}
+                >
+                  {selectedArticle.category}
+                </span>
+              </div>
+              
+              <h1>{selectedArticle.title}</h1>
+              
+              <div className="article-meta">
+                ✍ {selectedArticle.author} · 🕐 {new Date(selectedArticle.created_at).toLocaleDateString('kn-IN')} · {new Date(selectedArticle.created_at).toLocaleTimeString('kn-IN', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              
+              <div className="article-image-wrap">
+                <Thumbnail imageUrl={selectedArticle.image_url} category={selectedArticle.category} heightClass="400px" width="100%" />
+              </div>
+              
+              <div className="article-body-content">
+                {selectedArticle.content.split('\n').filter(p => p.trim() !== '').map((para, idx) => (
+                  <p key={idx}>{para}</p>
+                ))}
+              </div>
+
+              {/* Related news section */}
+              {articles.filter(a => a.category === selectedArticle.category && String(a.id) !== String(selectedArticle.id)).length > 0 && (
+                <div style={{ marginTop: '40px', borderTop: '1px solid var(--border)', paddingTop: '24px' }}>
+                  <div className="sec-head" style={{ marginBottom: '16px' }}>
+                    <h2>ಮತ್ತಷ್ಟು ಸಂಬಂಧಿತ ಸುದ್ದಿಗಳು</h2>
+                    <div className="sec-line"></div>
+                  </div>
+                  <div className="cat-3grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                    {articles
+                      .filter(a => a.category === selectedArticle.category && String(a.id) !== String(selectedArticle.id))
+                      .slice(0, 3)
+                      .map(art => (
+                        <NewsCard key={art.id} article={art} type="detailed" heightClass="180px" onClick={() => handleArticleClick(art.id)} />
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : selectedCategory === 'ಮುಖಪುಟ' && searchQuery === '' ? (
             /* ━━━━━━━━━━━━━━━━━━ DEFAULT HOME PAGE GRID ━━━━━━━━━━━━━━━━━━ */
             <>
               {/* HERO */}
@@ -214,11 +280,11 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
               {articles.length > 0 && (
                 <div className="hero-grid">
                   {heroNews && (
-                    <NewsCard article={heroNews} type="hero" heightClass="400px" />
+                    <NewsCard article={heroNews} type="hero" heightClass="400px" onClick={() => handleArticleClick(heroNews.id)} />
                   )}
 
                   {sideNews.map((art) => (
-                    <NewsCard key={art.id} article={art} type="side" heightClass="140px" />
+                    <NewsCard key={art.id} article={art} type="side" heightClass="140px" onClick={() => handleArticleClick(art.id)} />
                   ))}
                 </div>
               )}
@@ -234,13 +300,13 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
                 </div>
                 <div className="cat-3grid">
                   {stateNews.slice(0, 3).map(art => (
-                    <NewsCard key={art.id} article={art} type="side" heightClass="130px" />
+                    <NewsCard key={art.id} article={art} type="side" heightClass="130px" onClick={() => handleArticleClick(art.id)} />
                   ))}
                 </div>
                 {stateNews.length > 3 && (
                   <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '12px 16px', marginTop: '14px' }}>
                     {stateNews.slice(3, 6).map(art => (
-                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" />
+                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" onClick={() => handleArticleClick(art.id)} />
                     ))}
                   </div>
                 )}
@@ -258,14 +324,14 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
                   </div>
                   {nationalNews[0] && (
                     <div style={{ marginBottom: '12px' }}>
-                      <NewsCard article={nationalNews[0]} type="side" heightClass="150px" />
+                      <NewsCard article={nationalNews[0]} type="side" heightClass="150px" onClick={() => handleArticleClick(nationalNews[0].id)} />
                     </div>
                   )}
                   {nationalNews.length > 1 && (
                     <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
                       {nationalNews.slice(1, 4).map(art => (
                         <div key={art.id} style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '8px' }}>
-                          <NewsCard article={art} type="list" heightClass="0px" />
+                          <NewsCard article={art} type="list" heightClass="0px" onClick={() => handleArticleClick(art.id)} />
                         </div>
                       ))}
                     </div>
@@ -283,7 +349,7 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
                   <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
                     <ul className="num-list">
                       {politicsNews.slice(0, 5).map((art, idx) => (
-                        <li key={art.id} className="num-item" onClick={() => handleCategorySelect(art.category)} style={{ cursor: 'pointer' }}>
+                        <li key={art.id} className="num-item" onClick={() => handleArticleClick(art.id)} style={{ cursor: 'pointer' }}>
                           <div className="num-badge">{idx + 1}</div>
                           <div>
                             <div className="num-title">{art.title}</div>
@@ -308,13 +374,13 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
                   </div>
                   {sportsNews[0] && (
                     <div style={{ marginBottom: '12px' }}>
-                      <NewsCard article={sportsNews[0]} type="side" heightClass="140px" />
+                      <NewsCard article={sportsNews[0]} type="side" heightClass="140px" onClick={() => handleArticleClick(sportsNews[0].id)} />
                     </div>
                   )}
                   {sportsNews.length > 1 && (
                     <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
                       {sportsNews.slice(1, 3).map(art => (
-                        <NewsCard key={art.id} article={art} type="list" heightClass="66px" />
+                        <NewsCard key={art.id} article={art} type="list" heightClass="66px" onClick={() => handleArticleClick(art.id)} />
                       ))}
                     </div>
                   )}
@@ -330,7 +396,7 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
                   </div>
                   <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
                     {entNews.slice(0, 3).map(art => (
-                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" />
+                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" onClick={() => handleArticleClick(art.id)} />
                     ))}
                   </div>
                 </div>
@@ -403,7 +469,7 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
                   </div>
                   <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
                     {techNews.slice(0, 3).map(art => (
-                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" />
+                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" onClick={() => handleArticleClick(art.id)} />
                     ))}
                   </div>
                 </div>
@@ -418,7 +484,7 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
                   </div>
                   <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
                     {healthNews.slice(0, 3).map(art => (
-                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" />
+                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" onClick={() => handleArticleClick(art.id)} />
                     ))}
                   </div>
                 </div>
@@ -447,7 +513,7 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
               ) : (
                 <div className="cat-3grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
                   {filteredArticles.map(art => (
-                    <NewsCard key={art.id} article={art} type="detailed" heightClass="180px" />
+                    <NewsCard key={art.id} article={art} type="detailed" heightClass="180px" onClick={() => handleArticleClick(art.id)} />
                   ))}
                 </div>
               )}
@@ -458,7 +524,7 @@ function NewsPortal({ navigate, currentCategory, routeMap }) {
         <Sidebar 
           activeCity={activeCity}
           trendingArticles={articles.slice(0, 5)}
-          onArticleClick={(art) => handleCategorySelect(art.category)}
+          onArticleClick={(art) => handleArticleClick(art.id)}
           poll={poll}
           selectedPollOption={selectedPollOption}
           setSelectedPollOption={setSelectedPollOption}

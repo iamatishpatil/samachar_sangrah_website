@@ -82,12 +82,21 @@ function App() {
 
   // Parse category/district based on clean URL path
   const slug = currentPath.replace(/^\//, '').toLowerCase();
-  const parsedCategory = REVERSE_ROUTE_MAP[slug] || 'ಮುಖಪುಟ';
+  
+  let parsedCategory = 'ಮುಖಪುಟ';
+  let articleId = null;
+  
+  if (slug.startsWith('news/')) {
+    articleId = slug.split('news/')[1];
+  } else {
+    parsedCategory = REVERSE_ROUTE_MAP[slug] || 'ಮುಖಪುಟ';
+  }
 
   return (
     <NewsPortal 
       navigate={navigate} 
       currentCategory={parsedCategory} 
+      articleId={articleId}
       routeMap={ROUTE_MAP}
     />
   );
