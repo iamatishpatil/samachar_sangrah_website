@@ -100,7 +100,7 @@ function Sidebar({
         </div>
         <div className="widget-body">
           {trendingArticles.map((art, idx) => (
-            <div key={art.id} className="trend-item" onClick={() => onArticleClick(art)} style={{ cursor: 'pointer' }}>
+            <div key={art.id} className="trend-item" onClick={() => onCategorySelect(art.category)} style={{ cursor: 'pointer' }}>
               <div className="trend-num">{idx + 1}</div>
               <div>
                 <div className="trend-title">{art.title}</div>

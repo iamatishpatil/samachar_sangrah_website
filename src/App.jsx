@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import NewsPortal from './components/NewsPortal';
 import AdminDashboard from './components/AdminDashboard';
+import ArticleDetail from './components/ArticleDetail';
 
 // Mapping of internal Kannada category and district names to clean URL slug paths
 const ROUTE_MAP = {
@@ -71,32 +72,33 @@ function App() {
     };
   }, []);
 
-  const navigate = (path) => {
-    window.history.pushState({}, '', path);
-    setCurrentPath(path);
+  const navigate = (pathOrDelta) => {
+    if (pathOrDelta === -1) {
+      window.history.back();
+      return;
+    }
+    window.history.pushState({}, '', pathOrDelta);
+    setCurrentPath(pathOrDelta);
   };
 
   if (currentPath.startsWith('/admin')) {
     return <AdminDashboard navigate={navigate} />;
   }
 
+  // Article detail page: /article/:id or /news/:id
+  const articleMatch = currentPath.match(/^\/(?:article|news)\/(\d+)$/);
+  if (articleMatch) {
+    return <ArticleDetail articleId={articleMatch[1]} navigate={navigate} />;
+  }
+
   // Parse category/district based on clean URL path
   const slug = currentPath.replace(/^\//, '').toLowerCase();
-  
-  let parsedCategory = 'ಮುಖಪುಟ';
-  let articleId = null;
-  
-  if (slug.startsWith('news/')) {
-    articleId = slug.split('news/')[1];
-  } else {
-    parsedCategory = REVERSE_ROUTE_MAP[slug] || 'ಮುಖಪುಟ';
-  }
+  const parsedCategory = REVERSE_ROUTE_MAP[slug] || 'ಮುಖಪುಟ';
 
   return (
     <NewsPortal 
       navigate={navigate} 
       currentCategory={parsedCategory} 
-      articleId={articleId}
       routeMap={ROUTE_MAP}
     />
   );

@@ -13,13 +13,23 @@ router.get('/news', (req, res) => {
     params.push(category);
   }
   
-  query += ' ORDER BY created_at DESC LIMIT 60'; // Limit results to latest 60 articles
+  query += ' ORDER BY created_at DESC LIMIT 60';
 
   db.all(query, params, (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
     res.json(rows);
+  });
+});
+
+// Get single article by ID
+router.get('/news/:id', (req, res) => {
+  const { id } = req.params;
+  db.get('SELECT * FROM articles WHERE id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Article not found' });
+    res.json(row);
   });
 });
 
