@@ -29,14 +29,15 @@ function TopBar({ navigate }) {
     <div className="topbar">
       <div className="container">
         <div className="topbar-left">
+          <div className="topbar-date">{getKannadaDate()} | ಬೆಂಗಳೂರು ☀ 28°C</div>
+        </div>
+        <div className="topbar-right">
           <a href="#">ಜಾಹೀರಾತು</a>
           <span className="topbar-divider">|</span>
           <a href="#">ನಮ್ಮ ಬಗ್ಗೆ</a>
           <span className="topbar-divider">|</span>
           <a href="#">ಸಂಪರ್ಕಿಸಿ</a>
-        </div>
-        <div className="topbar-right">
-          <div className="topbar-date">{getKannadaDate()} | ಬೆಂಗಳೂರು ☀ 28°C</div>
+          <span className="topbar-divider">|</span>
           <div className="social-icons" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><InstagramIcon /></a>
             <a href={SOCIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer" aria-label="YouTube" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><YouTubeIcon /></a>

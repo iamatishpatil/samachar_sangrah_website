@@ -1,14 +1,14 @@
 import React from 'react';
 
 // Shared thumbnail rendering engine with customizable width and height
-export const Thumbnail = ({ imageUrl, category, heightClass = "130px", width = "100%" }) => {
-  const style = { height: heightClass, width: width, objectFit: 'cover' };
+export const Thumbnail = ({ imageUrl, category, heightClass = "130px", width = "100%", objectFit = "contain" }) => {
+  const style = { height: heightClass, width: width, objectFit, backgroundColor: '#f8f9fa' };
 
-  if (imageUrl && imageUrl.startsWith('/uploads/')) {
+  if (imageUrl && !imageUrl.startsWith('ph ph-')) {
     return (
       <img 
         src={imageUrl} 
-        alt="News" 
+        alt="Thumbnail" 
         className="thumb" 
         style={style} 
       />

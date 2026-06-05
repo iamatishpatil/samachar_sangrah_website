@@ -516,6 +516,35 @@ const initializeDatabase = async () => {
       )
     `);
 
+    // 8. Create Photos Table (Gallery)
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS photos (
+        id SERIAL PRIMARY KEY,
+        image_url TEXT,
+        caption TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Seed default photos if empty
+    const photoCheck = await pool.query("SELECT count(*) as count FROM photos");
+    if (parseInt(photoCheck.rows[0].count) === 0) {
+      const defaultPhotos = [
+        { image_url: "ph ph-red", caption: "Photo 1" },
+        { image_url: "ph ph-blue", caption: "Photo 2" },
+        { image_url: "ph ph-green", caption: "Photo 3" },
+        { image_url: "ph ph-orange", caption: "Photo 4" }
+      ];
+
+      for (const photo of defaultPhotos) {
+        await pool.query(
+          "INSERT INTO photos (image_url, caption) VALUES ($1, $2)",
+          [photo.image_url, photo.caption]
+        );
+      }
+      console.log("Default photos loaded");
+    }
+
     console.log('✅ PostgreSQL database tables and connections verified successfully.');
   } catch (migrationErr) {
     console.error("❌ Database Migration Error:", migrationErr.message);

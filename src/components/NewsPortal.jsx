@@ -7,12 +7,27 @@ import NewsCard, { Thumbnail } from './portal/NewsCard';
 import Sidebar from './portal/Sidebar';
 import Footer from './portal/Footer';
 
+/* ── Reel Card Component ── */
+function ReelCard({ reel }) {
+  return (
+    <a href={reel.video_url} target="_blank" rel="noopener noreferrer" className="reel-card" style={{ display: 'block', textDecoration: 'none' }}>
+      <Thumbnail imageUrl={reel.image_url} category="🎬" heightClass="100%" />
+      <div className="reel-overlay">
+        <div className="reel-play">▶</div>
+        {reel.duration && <div className="reel-dur">{reel.duration}</div>}
+      </div>
+      <div className="reel-title">{reel.title}</div>
+    </a>
+  );
+}
+
 function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
   const [articles, setArticles] = useState([]);
   const [tickerItems, setTickerItems] = useState([]);
   const [videos, setVideos] = useState([]);
   const [opinions, setOpinions] = useState([]);
   const [poll, setPoll] = useState(null);
+  const [photos, setPhotos] = useState([]);
   
   const [selectedCategory, setSelectedCategory] = useState(currentCategory);
 
@@ -53,6 +68,11 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
       .then(data => setOpinions(Array.isArray(data) ? data : []))
       .catch(err => console.error('Error fetching opinions:', err));
 
+    fetch('/api/photos')
+      .then(res => res.json())
+      .then(data => setPhotos(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Error fetching photos:', err));
+
     fetch('/api/poll')
       .then(res => res.json())
       .then(data => {
@@ -76,7 +96,7 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
   // Category navigation list
   const categories = [
     'ಮುಖಪುಟ', 'ರಾಜ್ಯ', 'ರಾಷ್ಟ್ರ', 'ಅಂತರರಾಷ್ಟ್ರೀಯ', 'ರಾಜಕೀಯ',
-    'ಕ್ರೀಡೆ', 'ಮನರಂಜನೆ', 'ತಂತ್ರಜ್ಞಾನ', 'ಆರೋಗ್ಯ', 'ಅಭಿಪ್ರಾಯ'
+    'ಕ್ರೀಡೆ', 'ಮನರಂಜನೆ', 'ತಂತ್ರಜ್ಞಾನ', 'ಆರೋಗ್ಯ'
   ];
 
   // Filter articles based on selected category and search queries
@@ -187,21 +207,20 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
 
   return (
     <>
-      <TopBar navigate={navigate} />
-      
-      <Masthead onHomeClick={() => handleCategorySelect('ಮುಖಪುಟ')} />
-
-      <NavBar 
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onCategorySelect={handleCategorySelect}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        activeCity={activeCity}
-        onCityChange={setActiveCity}
-      />
-
-
+      {/* ── STICKY HEADER WRAPPER ── */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 300 }}>
+        <TopBar navigate={navigate} />
+        <Masthead onHomeClick={() => handleCategorySelect('ಮುಖಪುಟ')} />
+        <NavBar
+          categories={categories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={handleCategorySelect}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          activeCity={activeCity}
+          onCityChange={setActiveCity}
+        />
+      </div>
 
       <Ticker tickerItems={tickerItems} />
 
@@ -402,28 +421,6 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
                 </div>
               </div>
 
-              {/* VIDEO SECTION */}
-              {videos.length > 0 && (
-                <div className="video-section">
-                  <div className="sec-head">
-                    <h2>📹 ವಿಡಿಯೋ</h2>
-                    <div className="sec-line"></div>
-                    <a href="#" className="sec-more">ಎಲ್ಲಾ ವಿಡಿಯೋ →</a>
-                  </div>
-                  <div className="video-grid">
-                    {videos.slice(0, 4).map(v => (
-                      <div key={v.id} className="video-card">
-                        <div className="video-thumb">
-                          <Thumbnail imageUrl={v.image_url} category="📹" heightClass="110px" />
-                          <div className="play-ring"></div>
-                          <div className="video-dur">{v.duration}</div>
-                        </div>
-                        <div className="video-title">{v.title}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* OPINIONS */}
               {opinions.length > 0 && (
@@ -489,6 +486,30 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
                   </div>
                 </div>
               </div>
+
+              {/* ━━━━━━━━ TRENDING REELS ━━━━━━━━ */}
+              <div className="reels-section">
+                <div className="sec-head">
+                  <h2>🎬 ಟ್ರೆಂಡಿಂಗ್ ರೀಲ್ಸ್</h2>
+                  <div className="sec-line"></div>
+                  <a href="#" className="sec-more">ಎಲ್ಲಾ ರೀಲ್ಸ್ →</a>
+                </div>
+
+                {videos.length === 0 ? (
+                  <div className="reels-empty">
+                    <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎥</div>
+                    <div style={{ fontSize: '14px', color: '#888', fontFamily: 'var(--kn-font)' }}>
+                      ಶೀಘ್ರದಲ್ಲೇ ರೀಲ್ಸ್ ಇಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆ
+                    </div>
+                  </div>
+                ) : (
+                  <div className="reels-grid">
+                    {videos.slice(0, 6).map((v, idx) => (
+                      <ReelCard key={v.id || idx} reel={v} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             /* ━━━━━━━━━━━━━━━━━━ CATEGORY FILTER / SEARCH RESULTS ━━━━━━━━━━━━━━━━━━ */
@@ -517,8 +538,34 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
                   ))}
                 </div>
               )}
+
+              {/* Reels on ಮನರಂಜನೆ page */}
+              {selectedCategory === 'ಮನರಂಜನೆ' && (
+                <div className="reels-section" style={{ marginTop: '32px' }}>
+                  <div className="sec-head">
+                    <h2>🎬 ಟ್ರೆಂಡಿಂಗ್ ರೀಲ್ಸ್</h2>
+                    <div className="sec-line"></div>
+                    <a href="#" className="sec-more">ಎಲ್ಲಾ ರೀಲ್ಸ್ →</a>
+                  </div>
+                  {videos.length === 0 ? (
+                    <div className="reels-empty">
+                      <div style={{ fontSize: '40px', marginBottom: '10px' }}>🎥</div>
+                      <div style={{ fontSize: '14px', color: '#888', fontFamily: 'var(--kn-font)' }}>
+                        ಶೀಘ್ರದಲ್ಲೇ ರೀಲ್ಸ್ ಇಲ್ಲಿ ಕಾಣಿಸಿಕೊಳ್ಳುತ್ತವೆ
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="reels-grid">
+                      {videos.slice(0, 6).map((v, idx) => (
+                        <ReelCard key={v.id || idx} reel={v} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
+
         </main>
 
         <Sidebar 
@@ -536,6 +583,7 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
           newsletterMsg={newsletterMsg}
           onNewsletterSubmit={handleNewsletterSubmit}
           onCategorySelect={handleCategorySelect}
+          photos={photos}
         />
       </div>
 

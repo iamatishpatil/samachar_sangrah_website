@@ -5,14 +5,13 @@ function Masthead({ onHomeClick }) {
     <header className="masthead">
       <div className="container">
         <div className="logo-block" onClick={onHomeClick} style={{ cursor: 'pointer' }}>
-          <h1 className="logo-kn">
-            ಸಮಾಚಾರ<br />
-            ಸಂಗ್ರಹ
-          </h1>
-          <div className="logo-en">Samachar Sangrah</div>
-          <div className="logo-tagline">ನಿಜವಾದ ಸುದ್ದಿ · ಸದಾ ವಿಶ್ವಾಸಾರ್ಹ</div>
+          <img
+            src="/IMG_1105.PNG"
+            alt="ಸಮಾಚಾರ ಸಂಗ್ರಹ Logo"
+            className="masthead-logo-img"
+            style={{ height: '80px', width: 'auto', objectFit: 'contain', display: 'block' }}
+          />
         </div>
-        <div className="masthead-ad">[ ಜಾಹೀರಾತು ಸ್ಥಳ — 728×90 ]</div>
       </div>
     </header>
   );

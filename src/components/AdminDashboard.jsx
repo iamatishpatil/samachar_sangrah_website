@@ -16,6 +16,7 @@ function AdminDashboard({ navigate }) {
   const [opinions, setOpinions] = useState([]);
   const [subscribers, setSubscribers] = useState([]);
   const [activePoll, setActivePoll] = useState(null);
+  const [photos, setPhotos] = useState([]);
 
   // Forms inputs states
   // News Form
@@ -35,7 +36,8 @@ function AdminDashboard({ navigate }) {
   // Video Form
   const [videoTitle, setVideoTitle] = useState('');
   const [videoDuration, setVideoDuration] = useState('');
-  const [videoUrl, setVideoUrl] = useState('#');
+  const [videoUrl, setVideoUrl] = useState('');
+  const [videoImageFile, setVideoImageFile] = useState(null);
   const [videoImagePlaceholder, setVideoImagePlaceholder] = useState('ph ph-red');
   const [videoMsg, setVideoMsg] = useState({ text: '', type: '' });
 
@@ -54,6 +56,12 @@ function AdminDashboard({ navigate }) {
   const [pollOption3, setPollOption3] = useState('');
   const [pollOption4, setPollOption4] = useState('');
   const [pollMsg, setPollMsg] = useState({ text: '', type: '' });
+
+  // Photo Form
+  const [photoCaption, setPhotoCaption] = useState('');
+  const [photoImageFile, setPhotoImageFile] = useState(null);
+  const [photoImagePlaceholder, setPhotoImagePlaceholder] = useState('ph ph-red');
+  const [photoMsg, setPhotoMsg] = useState({ text: '', type: '' });
 
   // Verify token on mount/change
   useEffect(() => {
@@ -114,6 +122,11 @@ function AdminDashboard({ navigate }) {
     fetch('/api/admin/subscribers', { headers })
       .then(res => res.json())
       .then(data => setSubscribers(Array.isArray(data) ? data : []))
+      .catch(err => console.error(err));
+
+    fetch('/api/photos')
+      .then(res => res.json())
+      .then(data => setPhotos(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
   };
 
@@ -255,20 +268,23 @@ function AdminDashboard({ navigate }) {
     e.preventDefault();
     setVideoMsg({ text: '', type: '' });
 
-    if (!videoTitle || !videoDuration) return;
+    if (!videoTitle) return;
+
+    const formData = new FormData();
+    formData.append('title', videoTitle);
+    formData.append('duration', videoDuration);
+    formData.append('video_url', videoUrl);
+
+    if (videoImageFile) {
+      formData.append('image', videoImageFile);
+    } else {
+      formData.append('image_url', videoImagePlaceholder);
+    }
 
     fetch('/api/admin/videos', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        title: videoTitle,
-        duration: videoDuration,
-        video_url: videoUrl,
-        image_url: videoImagePlaceholder
-      })
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
     })
       .then(res => res.json())
       .then(data => {
@@ -371,6 +387,51 @@ function AdminDashboard({ navigate }) {
           loadDashboardData();
         }
       });
+  };
+
+  // 📷 Add Photo Submit
+  const handleAddPhoto = (e) => {
+    e.preventDefault();
+    setPhotoMsg({ text: '', type: '' });
+
+    const formData = new FormData();
+    formData.append('caption', photoCaption);
+    
+    if (photoImageFile) {
+      formData.append('image', photoImageFile);
+    } else {
+      formData.append('image_url', photoImagePlaceholder);
+    }
+
+    fetch('/api/admin/photos', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          setPhotoMsg({ text: data.error, type: 'error' });
+        } else {
+          setPhotoMsg({ text: '✅ Photo added to gallery!', type: 'success' });
+          setPhotoCaption('');
+          setPhotoImageFile(null);
+          loadDashboardData();
+        }
+      })
+      .catch(err => {
+        setPhotoMsg({ text: 'Server error. Failed to add photo.', type: 'error' });
+      });
+  };
+
+  const handleDeletePhoto = (id) => {
+    if (!window.confirm('Are you sure you want to delete this photo?')) return;
+
+    fetch(`/api/admin/photos/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(() => loadDashboardData());
   };
 
   const handleDownloadBackup = () => {
@@ -482,13 +543,16 @@ function AdminDashboard({ navigate }) {
             🔴 Ticker Tape
           </button>
           <button className={`admin-nav-item ${activeTab === 'videos' ? 'active' : ''}`} onClick={() => setActiveTab('videos')}>
-            📹 Videos
+            📹 Trending Reels
           </button>
           <button className={`admin-nav-item ${activeTab === 'opinions' ? 'active' : ''}`} onClick={() => setActiveTab('opinions')}>
             💬 Opinions
           </button>
           <button className={`admin-nav-item ${activeTab === 'poll' ? 'active' : ''}`} onClick={() => setActiveTab('poll')}>
             📊 Live Poll
+          </button>
+          <button className={`admin-nav-item ${activeTab === 'photos' ? 'active' : ''}`} onClick={() => setActiveTab('photos')}>
+            📷 Photo Gallery
           </button>
           <button className={`admin-nav-item ${activeTab === 'newsletter' ? 'active' : ''}`} onClick={() => setActiveTab('newsletter')}>
             📧 Subscribers ({subscribers.length})
@@ -706,11 +770,11 @@ function AdminDashboard({ navigate }) {
           </div>
         )}
 
-        {/* 3. VIDEOS TAB */}
+        {/* 3. TRENDING REELS TAB */}
         {activeTab === 'videos' && (
           <div className="admin-grid-layout">
             <div className="admin-card">
-              <h2>Add Video Link</h2>
+              <h2>Add Trending Reel</h2>
               <form onSubmit={handleAddVideo}>
                 {videoMsg.text && (
                   <div className={videoMsg.type === 'success' ? 'success-msg' : 'error-msg'}>
@@ -718,7 +782,7 @@ function AdminDashboard({ navigate }) {
                   </div>
                 )}
                 <div className="admin-form-group">
-                  <label>Video Title (ವಿಡಿಯೋ ಶೀರ್ಷಿಕೆ)</label>
+                  <label>Reel Title / Caption (ರೀಲ್ ಶೀರ್ಷಿಕೆ)</label>
                   <input 
                     className="admin-input" 
                     type="text" 
@@ -730,60 +794,101 @@ function AdminDashboard({ navigate }) {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   <div className="admin-form-group">
-                    <label>Duration (ಅವಧಿ)</label>
+                    <label>Duration (Optional)</label>
                     <input 
                       className="admin-input" 
                       type="text" 
                       value={videoDuration} 
                       onChange={(e) => setVideoDuration(e.target.value)} 
-                      required 
                       placeholder="E.g., 5:42"
                     />
                   </div>
                   <div className="admin-form-group">
-                    <label>Video URL</label>
+                    <label>Reel Link / URL (YouTube, FB, Insta, etc.)</label>
                     <input 
                       className="admin-input" 
                       type="text" 
                       value={videoUrl} 
                       onChange={(e) => setVideoUrl(e.target.value)} 
-                      placeholder="#"
+                      placeholder="https://..."
+                      required
                     />
                   </div>
                 </div>
+                
                 <div className="admin-form-group">
-                  <label>Thumbnail Placeholder Style</label>
-                  <select 
-                    className="admin-input" 
-                    value={videoImagePlaceholder} 
-                    onChange={(e) => setVideoImagePlaceholder(e.target.value)}
-                  >
-                    <option value="ph ph-red">Red Gradient</option>
-                    <option value="ph ph-blue">Blue Gradient</option>
-                    <option value="ph ph-orange">Orange Gradient</option>
-                    <option value="ph ph-purple">Purple Gradient</option>
-                    <option value="ph ph-teal">Teal Gradient</option>
-                  </select>
+                  <label>Thumbnail Image</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input 
+                        type="radio" 
+                        name="video_source" 
+                        defaultChecked 
+                        onChange={() => setVideoImageFile(null)} 
+                      />
+                      Use Placeholder (Gradient)
+                    </label>
+                    <select 
+                      className="admin-input" 
+                      value={videoImagePlaceholder} 
+                      onChange={(e) => setVideoImagePlaceholder(e.target.value)}
+                      disabled={videoImageFile !== null}
+                    >
+                      <option value="ph ph-red">Red Gradient</option>
+                      <option value="ph ph-blue">Blue Gradient</option>
+                      <option value="ph ph-orange">Orange Gradient</option>
+                      <option value="ph ph-purple">Purple Gradient</option>
+                      <option value="ph ph-teal">Teal Gradient</option>
+                    </select>
+                    
+                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                      <input 
+                        type="radio" 
+                        name="video_source" 
+                        id="video_upload_radio" 
+                      />
+                      Upload Custom Thumbnail
+                    </label>
+                    <input 
+                      type="file" 
+                      className="admin-input" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        setVideoImageFile(e.target.files[0]);
+                        document.getElementById('video_upload_radio').checked = true;
+                      }}
+                    />
+                  </div>
                 </div>
-                <button className="admin-btn" type="submit">Add Video Card 📹</button>
+                
+                <button className="admin-btn" type="submit">Add Reel 📹</button>
               </form>
             </div>
 
             <div className="admin-card">
-              <h2>Videos List</h2>
+              <h2>Reels List</h2>
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Title</th>
-                    <th>Duration</th>
+                    <th>Thumbnail</th>
+                    <th>Title & Link</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {videos.map(v => (
                     <tr key={v.id}>
-                      <td style={{ color: '#fff', fontWeight: 600 }}>{v.title}</td>
-                      <td>{v.duration}</td>
+                      <td>
+                        {v.image_url && v.image_url.startsWith('ph ph-') ? (
+                          <div className={v.image_url} style={{ width: '40px', height: '40px', borderRadius: '4px' }}></div>
+                        ) : (
+                          <img src={v.image_url} alt="thumbnail" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px', background: '#222' }} />
+                        )}
+                      </td>
+                      <td>
+                        <div style={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}>{v.title}</div>
+                        <a href={v.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--gold)', textDecoration: 'underline' }}>{v.video_url}</a>
+                      </td>
                       <td>
                         <button className="admin-btn-danger" onClick={() => handleDeleteVideo(v.id)} style={{ padding: '4px 8px', fontSize: '11px' }}>
                           Delete
@@ -1019,6 +1124,112 @@ function AdminDashboard({ navigate }) {
                 </tbody>
               </table>
             )}
+          </div>
+        )}
+
+
+        {/* 7. PHOTOS TAB */}
+        {activeTab === 'photos' && (
+          <div className="admin-grid-layout">
+            <div className="admin-card">
+              <h2>Add Photo to Gallery</h2>
+              <form onSubmit={handleAddPhoto}>
+                {photoMsg.text && (
+                  <div className={photoMsg.type === 'success' ? 'success-msg' : 'error-msg'}>
+                    {photoMsg.text}
+                  </div>
+                )}
+                <div className="admin-form-group">
+                  <label>Photo Caption (ಫೋಟೋ ಶೀರ್ಷಿಕೆ)</label>
+                  <input 
+                    className="admin-input" 
+                    type="text" 
+                    value={photoCaption} 
+                    onChange={(e) => setPhotoCaption(e.target.value)} 
+                    placeholder="E.g., ಮೈಸೂರು ದಸರಾ"
+                  />
+                </div>
+                
+                <div className="admin-form-group">
+                  <label>Image Source</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <input 
+                        type="radio" 
+                        name="photo_source" 
+                        defaultChecked 
+                        onChange={() => setPhotoImageFile(null)} 
+                      />
+                      Use Placeholder (Gradient)
+                    </label>
+                    <select 
+                      className="admin-input" 
+                      value={photoImagePlaceholder} 
+                      onChange={(e) => setPhotoImagePlaceholder(e.target.value)}
+                      disabled={photoImageFile !== null}
+                    >
+                      <option value="ph ph-red">Red Gradient</option>
+                      <option value="ph ph-blue">Blue Gradient</option>
+                      <option value="ph ph-green">Green Gradient</option>
+                      <option value="ph ph-orange">Orange Gradient</option>
+                      <option value="ph ph-purple">Purple Gradient</option>
+                      <option value="ph ph-teal">Teal Gradient</option>
+                    </select>
+                    
+                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                      <input 
+                        type="radio" 
+                        name="photo_source" 
+                        id="photo_upload_radio" 
+                      />
+                      Upload Custom Photo
+                    </label>
+                    <input 
+                      type="file" 
+                      className="admin-input" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        setPhotoImageFile(e.target.files[0]);
+                        document.getElementById('photo_upload_radio').checked = true;
+                      }}
+                    />
+                  </div>
+                </div>
+                <button className="admin-btn" type="submit">Add Photo 📷</button>
+              </form>
+            </div>
+
+            <div className="admin-card">
+              <h2>Gallery Photos</h2>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Photo</th>
+                    <th>Caption</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {photos.map(p => (
+                    <tr key={p.id}>
+                      <td>
+                        {p.image_url.startsWith('ph ph-') ? (
+                          <div className={p.image_url} style={{ width: '40px', height: '40px', borderRadius: '4px' }}></div>
+                        ) : (
+                          <img src={p.image_url} alt="thumbnail" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px', background: '#222' }} />
+                        )}
+                      </td>
+                      <td style={{ color: '#fff' }}>{p.caption}</td>
+                      <td>
+                        <button className="admin-btn-danger" onClick={() => handleDeletePhoto(p.id)} style={{ padding: '4px 8px', fontSize: '11px' }}>
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 

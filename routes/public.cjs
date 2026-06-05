@@ -136,4 +136,14 @@ router.post('/newsletter', (req, res) => {
   });
 });
 
+// Get photos for gallery
+router.get('/photos', (req, res) => {
+  db.all('SELECT * FROM photos ORDER BY id DESC LIMIT 12', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
 module.exports = router;

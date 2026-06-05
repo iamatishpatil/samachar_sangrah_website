@@ -97,26 +97,29 @@ router.delete('/ticker/:id', authenticateToken, (req, res) => {
   });
 });
 
-// Post video card
-router.post('/videos', authenticateToken, (req, res) => {
-  const { title, duration, video_url, image_url } = req.body;
-  if (!title || !duration) {
-    return res.status(400).json({ error: 'Title and duration are required' });
+// Post video/reel card
+router.post('/videos', authenticateToken, upload.single('image'), (req, res) => {
+  const { title, duration, video_url } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
   }
 
   const finalVideoUrl = video_url || '#';
-  const finalImageUrl = image_url || 'ph ph-red';
+  let finalImageUrl = req.body.image_url || 'ph ph-red';
+  if (req.file) {
+    finalImageUrl = '/uploads/' + req.file.filename;
+  }
 
   db.run(
     'INSERT INTO videos (title, duration, video_url, image_url) VALUES (?, ?, ?, ?)',
-    [title, duration, finalVideoUrl, finalImageUrl],
+    [title, duration || '', finalVideoUrl, finalImageUrl],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
       res.json({
         success: true,
-        video: { id: this.lastID, title, duration, video_url: finalVideoUrl, image_url: finalImageUrl }
+        video: { id: this.lastID, title, duration: duration || '', video_url: finalVideoUrl, image_url: finalImageUrl }
       });
     }
   );
@@ -255,6 +258,59 @@ router.get('/backup', authenticateToken, (req, res) => {
           });
         });
       });
+    });
+  });
+});
+
+// Post photo to gallery
+router.post('/photos', authenticateToken, upload.single('image'), (req, res) => {
+  const { caption } = req.body;
+  let image_url = req.body.image_url || 'ph ph-red'; 
+
+  if (req.file) {
+    image_url = '/uploads/' + req.file.filename;
+  }
+
+  db.run(
+    'INSERT INTO photos (image_url, caption) VALUES (?, ?)',
+    [image_url, caption || ''],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({
+        success: true,
+        photo: {
+          id: this.lastID,
+          image_url,
+          caption: caption || '',
+          created_at: new Date().toISOString()
+        }
+      });
+    }
+  );
+});
+
+// Delete photo from gallery
+router.delete('/photos/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.get('SELECT image_url FROM photos WHERE id = ?', [id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Photo not found' });
+
+    if (row.image_url.startsWith('/uploads/')) {
+      const imagePath = path.join(__dirname, '../public', row.image_url);
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+    }
+
+    db.run('DELETE FROM photos WHERE id = ?', [id], (deleteErr) => {
+      if (deleteErr) {
+        return res.status(500).json({ error: deleteErr.message });
+      }
+      res.json({ success: true, message: 'Photo deleted successfully' });
     });
   });
 });

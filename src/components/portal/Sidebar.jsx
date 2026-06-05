@@ -50,7 +50,8 @@ function Sidebar({
   setNewsletterEmail,
   newsletterMsg,
   onNewsletterSubmit,
-  onCategorySelect
+  onCategorySelect,
+  photos = []
 }) {
   
   // Render Poll Percentages
@@ -87,8 +88,69 @@ function Sidebar({
 
   return (
     <aside className="sidebar">
-      {/* AD */}
-      <div className="ad-box">[ ಜಾಹೀರಾತು 300×250 ]</div>
+
+      {/* CURRENT AFFAIRS */}
+      <div className="widget">
+        <div className="widget-head">
+          📰 ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನ
+          <span className="widget-head-more" onClick={() => onCategorySelect('ಮುಖಪುಟ')} style={{ cursor: 'pointer' }}>
+            ಎಲ್ಲಾ →
+          </span>
+        </div>
+        <div className="widget-body" style={{ padding: '0' }}>
+          {trendingArticles.slice(0, 5).map((art) => (
+            <div
+              key={art.id}
+              onClick={() => onArticleClick(art)}
+              style={{
+                display: 'flex',
+                gap: '10px',
+                padding: '10px 14px',
+                borderBottom: '1px solid var(--border)',
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#f9f9f9'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ flexShrink: 0, width: '72px', height: '56px', borderRadius: '4px', overflow: 'hidden' }}>
+                <Thumbnail imageUrl={art.image_url} category={art.category} heightClass="56px" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{
+                  display: 'inline-block',
+                  background: 'var(--red)',
+                  color: '#fff',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: '2px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  marginBottom: '4px'
+                }}>{art.category}</span>
+                <div style={{
+                  fontFamily: 'var(--kn-font)',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  color: '#111',
+                  lineHeight: 1.4,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                }}>{art.title}</div>
+                <div style={{ fontSize: '10px', color: '#888', marginTop: '3px' }}>
+                  🕐 {new Date(art.created_at).toLocaleDateString('kn-IN')}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* AD — below Current Affairs */}
+      <div className="ad-box" style={{ height: '250px' }}>[ ಜಾಹೀರಾತು 300×250 ]</div>
 
       {/* TRENDING */}
       <div className="widget">
@@ -131,22 +193,18 @@ function Sidebar({
       <div className="widget">
         <div className="widget-head">📷 ಫೋಟೋ ಗ್ಯಾಲರಿ</div>
         <div className="gallery-grid">
-          <div className="gallery-item" onClick={() => onCategorySelect('ಬೆಂಗಳೂರು')} style={{ cursor: 'pointer' }}>
-            <Thumbnail imageUrl="ph ph-red" category="📸" heightClass="75px" />
-            <div className="gallery-cap">ಬೆಂಗಳೂರು ಮೆಟ್ರೋ</div>
-          </div>
-          <div className="gallery-item" onClick={() => onCategorySelect('ರಾಜಕೀಯ')} style={{ cursor: 'pointer' }}>
-            <Thumbnail imageUrl="ph ph-blue" category="📸" heightClass="75px" />
-            <div className="gallery-cap">ರಾಜ್ಯ ವಿಧಾನಸಭೆ</div>
-          </div>
-          <div className="gallery-item" onClick={() => onCategorySelect('ಕ್ರೀಡೆ')} style={{ cursor: 'pointer' }}>
-            <Thumbnail imageUrl="ph ph-orange" category="📸" heightClass="75px" />
-            <div className="gallery-cap">IPL 2025</div>
-          </div>
-          <div className="gallery-item" onClick={() => onCategorySelect('ಮನರಂಜನೆ')} style={{ cursor: 'pointer' }}>
-            <Thumbnail imageUrl="ph ph-green" category="📸" heightClass="75px" />
-            <div className="gallery-cap">ಕಾಂತಾರ-2</div>
-          </div>
+          {photos.length > 0 ? (
+            photos.slice(0, 4).map(photo => (
+              <div key={photo.id} className="gallery-item" style={{ cursor: 'pointer', background: '#000' }}>
+                <Thumbnail imageUrl={photo.image_url} category="📸" heightClass="75px" objectFit="contain" />
+                <div className="gallery-cap">{photo.caption}</div>
+              </div>
+            ))
+          ) : (
+            <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '10px', fontSize: '12px', color: '#888' }}>
+              ಇನ್ನೂ ಯಾವುದೇ ಫೋಟೋಗಳಿಲ್ಲ
+            </div>
+          )}
         </div>
       </div>
 
@@ -191,30 +249,7 @@ function Sidebar({
         </div>
       )}
 
-      {/* NEWSLETTER */}
-      <div className="widget">
-        <form className="newsletter-box" onSubmit={onNewsletterSubmit}>
-          <h3>📧 ನ್ಯೂಸ್‌ಲೆಟರ್ ಚಂದಾ</h3>
-          <p>ಪ್ರತಿ ದಿನ ಮುಂಜಾನೆ ಪ್ರಮುಖ ಸುದ್ದಿಗಳನ್ನು ಇ-ಮೇಲ್‌ನಲ್ಲಿ ಪಡೆಯಿರಿ</p>
-          <input 
-            className="newsletter-input" 
-            type="email" 
-            placeholder="ನಿಮ್ಮ ಇ-ಮೇಲ್ ಇಲ್ಲಿ ಟೈಪ್ ಮಾಡಿ"
-            value={newsletterEmail}
-            onChange={(e) => setNewsletterEmail(e.target.value)}
-            aria-label="ಇಮೇಲ್ ವಿಳಾಸ"
-          />
-          <button className="newsletter-btn" type="submit">ಚಂದಾ ಹಾಕಿ</button>
-          {newsletterMsg.text && (
-            <div className="newsletter-msg" style={{ color: newsletterMsg.type === 'success' ? '#a7f3d0' : '#fecaca' }}>
-              {newsletterMsg.text}
-            </div>
-          )}
-        </form>
-      </div>
 
-      {/* AD 2 */}
-      <div className="ad-box" style={{ height: '200px' }}>[ ಜಾಹೀರಾತು 300×200 ]</div>
     </aside>
   );
 }

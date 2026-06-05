@@ -9,7 +9,7 @@ function Footer({ onCategorySelect }) {
         <div>
           <div className="footer-logo">ಸಮಾಚಾರ ಸಂಗ್ರಹ</div>
           <div className="footer-about">
-            ಸಮಾಚಾರ ಸಂಗ್ರಹ — ಕರ್ನಾಟಕದ ಪ್ರಮುಖ ಕನ್ನಡ ಸುದ್ದಿ ಜಾಲತಾಣ. ರಾಜ್ಯ, ರಾಷ್ಟ್ರ, ಮತ್ತು ಅಂತರರಾಷ್ಟ್ರೀಯ ಸುದ್ದಿಗಳನ್ನು ನಿಖರವಾಗಿ ಮತ್ತು ತ್ವರಿತವಾಗಿ ತಲುಪಿಸುವ ನಮ್ಮ ಬದ್ಧತೆ.
+            ಕರ್ನಾಟಕದ ಸುದ್ದಿ, ಮಾಹಿತಿ ಮತ್ತು ಟ್ರೆಂಡಿಂಗ್ ಅಪ್‌ಡೇಟ್‌ಗಳು ನಿಮ್ಮ ವಿಶ್ವಾಸಾರ್ಹ ಕನ್ನಡ ಸುದ್ದಿ ವೇದಿಕೆ.
           </div>
           <div className="footer-social" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><InstagramIcon /></a>
@@ -21,13 +21,15 @@ function Footer({ onCategorySelect }) {
         </div>
         <div className="footer-col">
           <h4>ವಿಭಾಗಗಳು</h4>
+          <a onClick={() => onCategorySelect('ಮುಖಪುಟ')} style={{ cursor: 'pointer' }}>ಮುಖಪುಟ</a>
           <a onClick={() => onCategorySelect('ರಾಜ್ಯ')} style={{ cursor: 'pointer' }}>ರಾಜ್ಯ ಸುದ್ದಿ</a>
           <a onClick={() => onCategorySelect('ರಾಷ್ಟ್ರ')} style={{ cursor: 'pointer' }}>ರಾಷ್ಟ್ರೀಯ</a>
           <a onClick={() => onCategorySelect('ಅಂತರರಾಷ್ಟ್ರೀಯ')} style={{ cursor: 'pointer' }}>ಅಂತರರಾಷ್ಟ್ರೀಯ</a>
           <a onClick={() => onCategorySelect('ರಾಜಕೀಯ')} style={{ cursor: 'pointer' }}>ರಾಜಕೀಯ</a>
-          <a onClick={() => onCategorySelect('ವ್ಯಾಪಾರ')} style={{ cursor: 'pointer' }}>ವ್ಯಾಪಾರ</a>
           <a onClick={() => onCategorySelect('ಕ್ರೀಡೆ')} style={{ cursor: 'pointer' }}>ಕ್ರೀಡೆ</a>
           <a onClick={() => onCategorySelect('ಮನರಂಜನೆ')} style={{ cursor: 'pointer' }}>ಮನರಂಜನೆ</a>
+          <a onClick={() => onCategorySelect('ತಂತ್ರಜ್ಞಾನ')} style={{ cursor: 'pointer' }}>ತಂತ್ರಜ್ಞಾನ</a>
+          <a onClick={() => onCategorySelect('ಆರೋಗ್ಯ')} style={{ cursor: 'pointer' }}>ಆರೋಗ್ಯ</a>
         </div>
         <div className="footer-col">
           <h4>ಸೇವೆಗಳು</h4>
