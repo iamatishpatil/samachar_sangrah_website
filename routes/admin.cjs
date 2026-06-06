@@ -417,7 +417,6 @@ router.get('/analytics', authenticateToken, (req, res) => {
       });
     });
   });
-  });
 });
 
 // Create new collaborative admin
