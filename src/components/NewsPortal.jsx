@@ -96,7 +96,7 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
   // Category navigation list
   const categories = [
     'ಮುಖಪುಟ', 'ರಾಜ್ಯ', 'ರಾಷ್ಟ್ರ', 'ಅಂತರರಾಷ್ಟ್ರೀಯ', 'ರಾಜಕೀಯ',
-    'ಕ್ರೀಡೆ', 'ಮನರಂಜನೆ', 'ತಂತ್ರಜ್ಞಾನ', 'ಆರೋಗ್ಯ'
+    'ಕ್ರೀಡೆ', 'ಮನರಂಜನೆ', 'ತಂತ್ರಜ್ಞಾನ', 'ಆರೋಗ್ಯ', 'ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು', 'ಟ್ರೆಂಡಿಂಗ್', 'ಫೋಟೋ ಗ್ಯಾಲರಿ'
   ];
 
   // Filter articles based on selected category and search queries
@@ -110,6 +110,9 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
       } else {
         list = list.filter(a => a.category === selectedCategory);
       }
+    } else {
+      // Home page: show articles specifically categorized as 'ಮುಖಪುಟ', 'ರಾಜ್ಯ', or 'ರಾಷ್ಟ್ರ' in the hero/side sections
+      list = list.filter(a => ['ಮುಖಪುಟ', 'ರಾಜ್ಯ', 'ರಾಷ್ಟ್ರ'].includes(a.category));
     }
 
     // Search query filter
@@ -184,6 +187,8 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
   const entNews = articles.filter(a => a.category === 'ಮನರಂಜನೆ');
   const techNews = articles.filter(a => a.category === 'ತಂತ್ರಜ್ಞಾನ');
   const healthNews = articles.filter(a => a.category === 'ಆರೋಗ್ಯ');
+  const currentAffairsNews = articles.filter(a => a.category === 'ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು');
+  const trendingNews = articles.filter(a => a.category === 'ಟ್ರೆಂಡಿಂಗ್');
 
   const selectedArticle = articleId ? articles.find(a => String(a.id) === String(articleId)) : null;
 
@@ -207,9 +212,9 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
 
   return (
     <>
+      <TopBar navigate={navigate} />
       {/* ── STICKY HEADER WRAPPER ── */}
       <div style={{ position: 'sticky', top: 0, zIndex: 300 }}>
-        <TopBar navigate={navigate} />
         <Masthead onHomeClick={() => handleCategorySelect('ಮುಖಪುಟ')} />
         <NavBar
           categories={categories}
@@ -369,7 +374,7 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
                     <ul className="num-list">
                       {politicsNews.slice(0, 5).map((art, idx) => (
                         <li key={art.id} className="num-item" onClick={() => handleArticleClick(art.id)} style={{ cursor: 'pointer' }}>
-                          <div className="num-badge">{idx + 1}</div>
+                          <div className="num-badge" style={{ fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>•</div>
                           <div>
                             <div className="num-title">{art.title}</div>
                             <div className="list-meta">🕐 {new Date(art.created_at).toLocaleDateString('kn-IN')}</div>
@@ -422,37 +427,7 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
               </div>
 
 
-              {/* OPINIONS */}
-              {opinions.length > 0 && (
-                <div className="cat-section">
-                  <div className="sec-head">
-                    <h2>ಅಭಿಪ್ರಾಯ</h2>
-                    <div className="sec-line"></div>
-                    <a onClick={() => handleCategorySelect('ಅಭಿಪ್ರಾಯ')} className="sec-more" style={{ cursor: 'pointer' }}>
-                      ಇನ್ನಷ್ಟು →
-                    </a>
-                  </div>
-                  <div className="opinion-grid">
-                    {opinions.slice(0, 3).map((op, idx) => (
-                      <div 
-                        key={op.id} 
-                        className="opinion-card" 
-                        style={{ borderTopColor: idx === 1 ? 'var(--gold)' : idx === 2 ? '#16a34a' : 'var(--red)' }}
-                      >
-                        <div className="author-row">
-                          <div className="author-avatar">{op.author_avatar}</div>
-                          <div>
-                            <div className="author-name">{op.author_name}</div>
-                            <div className="author-role">{op.author_role}</div>
-                          </div>
-                        </div>
-                        <div className="opinion-headline">{op.headline}</div>
-                        <div className="opinion-quote">{op.quote}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* SECTION REMOVED */}
 
               {/* TECH + HEALTH */}
               <div className="cat-2grid" style={{ marginBottom: '28px' }}>
@@ -487,6 +462,41 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
                 </div>
               </div>
 
+              {/* CURRENT AFFAIRS + TRENDING */}
+              <div className="cat-2grid" style={{ marginBottom: '28px' }}>
+                <div className="cat-section">
+                  <div className="sec-head">
+                    <h2>ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು</h2>
+                    <div className="sec-line"></div>
+                    <a onClick={() => handleCategorySelect('ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು')} className="sec-more" style={{ cursor: 'pointer' }}>
+                      ಇನ್ನಷ್ಟು →
+                    </a>
+                  </div>
+                  <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
+                    {currentAffairsNews.slice(0, 3).map(art => (
+                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" onClick={() => handleArticleClick(art.id)} />
+                    ))}
+                    {currentAffairsNews.length === 0 && <p style={{color: '#888', fontSize: '13px', margin: '10px 0'}}>ಯಾವುದೇ ಸುದ್ದಿಗಳಿಲ್ಲ</p>}
+                  </div>
+                </div>
+
+                <div className="cat-section">
+                  <div className="sec-head">
+                    <h2>ಟ್ರೆಂಡಿಂಗ್ ವಿಷಯಗಳು</h2>
+                    <div className="sec-line"></div>
+                    <a onClick={() => handleCategorySelect('ಟ್ರೆಂಡಿಂಗ್')} className="sec-more" style={{ cursor: 'pointer' }}>
+                      ಇನ್ನಷ್ಟು →
+                    </a>
+                  </div>
+                  <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '5px', padding: '10px 14px' }}>
+                    {trendingNews.slice(0, 3).map(art => (
+                      <NewsCard key={art.id} article={art} type="list" heightClass="66px" onClick={() => handleArticleClick(art.id)} />
+                    ))}
+                    {trendingNews.length === 0 && <p style={{color: '#888', fontSize: '13px', margin: '10px 0'}}>ಯಾವುದೇ ಸುದ್ದಿಗಳಿಲ್ಲ</p>}
+                  </div>
+                </div>
+              </div>
+
               {/* ━━━━━━━━ TRENDING REELS ━━━━━━━━ */}
               <div className="reels-section">
                 <div className="sec-head">
@@ -510,6 +520,54 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
                   </div>
                 )}
               </div>
+
+              {/* ━━━━━━━━ PHOTO GALLERY SECTION ━━━━━━━━ */}
+              <div className="photo-gallery-section" style={{ marginTop: '32px' }}>
+                <div className="sec-head">
+                  <h2>📷 ಫೋಟೋ ಗ್ಯಾಲರಿ</h2>
+                  <div className="sec-line"></div>
+                  <a onClick={() => handleCategorySelect('ಫೋಟೋ ಗ್ಯಾಲರಿ')} className="sec-more" style={{ cursor: 'pointer' }}>
+                    ಎಲ್ಲಾ ನೋಡಿ / View More →
+                  </a>
+                </div>
+                {photos.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#888' }}>ಇನ್ನೂ ಯಾವುದೇ ಫೋಟೋಗಳಿಲ್ಲ</div>
+                ) : (
+                  <div className="cat-3grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px' }}>
+                    {photos.slice(0, 8).map(photo => (
+                      <div key={photo.id} style={{ cursor: 'pointer', background: '#000', borderRadius: '5px', overflow: 'hidden' }} onClick={() => handleCategorySelect('ಫೋಟೋ ಗ್ಯಾಲರಿ')}>
+                        <Thumbnail imageUrl={photo.image_url} category="📸" heightClass="150px" objectFit="contain" />
+                        <div style={{ padding: '8px', color: '#fff', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{photo.caption}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : selectedCategory === 'ಫೋಟೋ ಗ್ಯಾಲರಿ' ? (
+            /* ━━━━━━━━━━━━━━━━━━ FULL PHOTO GALLERY PAGE ━━━━━━━━━━━━━━━━━━ */
+            <>
+              <div className="sec-head">
+                <h2>📷 ಫೋಟೋ ಗ್ಯಾಲರಿ</h2>
+                <div className="sec-line"></div>
+                <a onClick={() => handleCategorySelect('ಮುಖಪುಟ')} className="sec-more" style={{ cursor: 'pointer' }}>
+                  ಮುಖಪುಟಕ್ಕೆ →
+                </a>
+              </div>
+              {photos.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 20px', color: 'var(--muted)', background: '#fff', border: '1px solid var(--border)', borderRadius: '5px' }}>
+                  <h3>ಯಾವುದೇ ಫೋಟೋಗಳು ಕಂಡುಬಂದಿಲ್ಲ.</h3>
+                </div>
+              ) : (
+                <div className="cat-3grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+                  {photos.map(photo => (
+                    <div key={photo.id} style={{ background: '#000', borderRadius: '5px', overflow: 'hidden' }}>
+                      <Thumbnail imageUrl={photo.image_url} category="📸" heightClass="200px" objectFit="contain" />
+                      <div style={{ padding: '12px', color: '#fff', fontSize: '14px' }}>{photo.caption}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             /* ━━━━━━━━━━━━━━━━━━ CATEGORY FILTER / SEARCH RESULTS ━━━━━━━━━━━━━━━━━━ */

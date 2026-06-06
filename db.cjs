@@ -146,6 +146,11 @@ const initializeDatabase = async () => {
       )
     `);
 
+    // Add views column if it doesn't exist
+    await pool.query(`
+      ALTER TABLE articles ADD COLUMN IF NOT EXISTS views INT DEFAULT 0;
+    `);
+
     // Seed default articles if empty
     const articleCheck = await pool.query("SELECT count(*) as count FROM articles");
     if (parseInt(articleCheck.rows[0].count) === 0) {
@@ -524,6 +529,11 @@ const initializeDatabase = async () => {
         caption TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    // Add views column if it doesn't exist
+    await pool.query(`
+      ALTER TABLE photos ADD COLUMN IF NOT EXISTS views INT DEFAULT 0;
     `);
 
     // Seed default photos if empty

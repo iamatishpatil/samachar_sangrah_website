@@ -1,8 +1,8 @@
 import React from 'react';
 
 // Shared thumbnail rendering engine with customizable width and height
-export const Thumbnail = ({ imageUrl, category, heightClass = "130px", width = "100%", objectFit = "contain" }) => {
-  const style = { height: heightClass, width: width, objectFit, backgroundColor: '#f8f9fa' };
+export const Thumbnail = ({ imageUrl, category, heightClass, width = "100%", objectFit = "cover", aspectRatio }) => {
+  const style = { height: heightClass || 'auto', width: width, objectFit, aspectRatio, backgroundColor: '#f8f9fa' };
 
   if (imageUrl && !imageUrl.startsWith('ph ph-')) {
     return (
@@ -33,12 +33,12 @@ function NewsCard({ article, type = "side", heightClass, onClick }) {
 
   if (type === 'hero') {
     return (
-      <div className="hero-card" onClick={onClick} style={{ cursor: 'pointer' }}>
-        <Thumbnail imageUrl={article.image_url} category={article.category} heightClass={heightClass || "400px"} width="100%" />
-        <div className="hero-overlay">
-          <div className="badge-cat">{article.category}</div>
-          <div className="hero-title">{article.title}</div>
-          <div className="hero-meta">
+      <div className="hero-card" onClick={onClick} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+        <Thumbnail imageUrl={article.image_url} category={article.category} heightClass={null} width="100%" aspectRatio="16/9" />
+        <div className="hero-body" style={{ padding: '15px 0' }}>
+          <div className="badge-cat" style={{ marginBottom: '10px' }}>{article.category}</div>
+          <div className="hero-title" style={{ color: '#111' }}>{article.title}</div>
+          <div className="hero-meta" style={{ color: '#555' }}>
             🕐 {timeString} · ✍ {article.author}
           </div>
         </div>
@@ -54,8 +54,9 @@ function NewsCard({ article, type = "side", heightClass, onClick }) {
           <Thumbnail 
             imageUrl={article.image_url} 
             category={article.category} 
-            heightClass={heightClass || "66px"} 
+            heightClass={null} 
             width="88px"
+            aspectRatio="4/3"
           />
         )}
         <div style={{ marginLeft: hasImage ? '11px' : '0px', flex: 1, minWidth: 0 }}>
@@ -71,7 +72,7 @@ function NewsCard({ article, type = "side", heightClass, onClick }) {
   if (type === 'detailed') {
     return (
       <div className="side-card" style={{ height: '100%', cursor: 'pointer' }} onClick={onClick}>
-        <Thumbnail imageUrl={article.image_url} category={article.category} heightClass={heightClass || "180px"} width="100%" />
+        <Thumbnail imageUrl={article.image_url} category={article.category} heightClass={null} width="100%" aspectRatio="16/9" />
         <div className="side-card-body" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: 'calc(100% - 180px)' }}>
           <div>
             <span className="card-cat">{article.category}</span>
@@ -92,7 +93,7 @@ function NewsCard({ article, type = "side", heightClass, onClick }) {
   // Fallback / Standard "side" card type
   return (
     <div className="side-card" onClick={onClick} style={{ cursor: 'pointer' }}>
-      <Thumbnail imageUrl={article.image_url} category={article.category} heightClass={heightClass || "130px"} width="100%" />
+      <Thumbnail imageUrl={article.image_url} category={article.category} heightClass={null} width="100%" aspectRatio="16/9" />
       <div className="side-card-body">
         <span className="card-cat">{article.category}</span>
         <div className="card-title">{article.title}</div>

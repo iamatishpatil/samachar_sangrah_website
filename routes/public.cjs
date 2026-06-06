@@ -26,10 +26,13 @@ router.get('/news', (req, res) => {
 // Get single article by ID
 router.get('/news/:id', (req, res) => {
   const { id } = req.params;
-  db.get('SELECT * FROM articles WHERE id = ?', [id], (err, row) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (!row) return res.status(404).json({ error: 'Article not found' });
-    res.json(row);
+  db.run('UPDATE articles SET views = COALESCE(views, 0) + 1 WHERE id = ?', [id], (updateErr) => {
+    if (updateErr) console.error('Error incrementing article views:', updateErr.message);
+    db.get('SELECT * FROM articles WHERE id = ?', [id], (err, row) => {
+      if (err) return res.status(500).json({ error: err.message });
+      if (!row) return res.status(404).json({ error: 'Article not found' });
+      res.json(row);
+    });
   });
 });
 
@@ -141,6 +144,12 @@ router.get('/photos', (req, res) => {
   db.all('SELECT * FROM photos ORDER BY id DESC LIMIT 12', [], (err, rows) => {
     if (err) {
       return res.status(500).json({ error: err.message });
+    }
+    // Asynchronously increment view counts of these photos to simulate traffic/impressions
+    if (rows && rows.length > 0) {
+      const ids = rows.map(r => r.id);
+      const placeholders = ids.map(() => '?').join(',');
+      db.run(`UPDATE photos SET views = COALESCE(views, 0) + 1 WHERE id IN (${placeholders})`, ids);
     }
     res.json(rows);
   });

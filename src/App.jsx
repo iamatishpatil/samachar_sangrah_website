@@ -16,7 +16,9 @@ const ROUTE_MAP = {
   'ತಂತ್ರಜ್ಞಾನ': 'technology',
   'ಆರೋಗ್ಯ': 'health',
   'ಧರ್ಮ': 'religion',
-  'ಅಭಿಪ್ರಾಯ': 'opinion',
+  'ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು': 'current-affairs',
+  'ಟ್ರೆಂಡಿಂಗ್': 'trending',
+  'ಫೋಟೋ ಗ್ಯಾಲರಿ': 'photo-gallery',
 
   // Karnataka Districts
   'ಬೆಂಗಳೂರು': 'bengaluru',

@@ -7,7 +7,12 @@ function AdminDashboard({ navigate }) {
   const [authError, setAuthError] = useState('');
 
   // Active Tab
-  const [activeTab, setActiveTab] = useState('news');
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Tooltip states for charts
+  const [visitorTooltip, setVisitorTooltip] = useState(null);
+  const [installTooltip, setInstallTooltip] = useState(null);
+  const [categoryTooltip, setCategoryTooltip] = useState(null);
 
   // Loaded database states
   const [articles, setArticles] = useState([]);
@@ -57,11 +62,55 @@ function AdminDashboard({ navigate }) {
   const [pollOption4, setPollOption4] = useState('');
   const [pollMsg, setPollMsg] = useState({ text: '', type: '' });
 
+  // Add Admin Form
+  const [newAdminMobile, setNewAdminMobile] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [adminMsg, setAdminMsg] = useState(null);
+
   // Photo Form
   const [photoCaption, setPhotoCaption] = useState('');
   const [photoImageFile, setPhotoImageFile] = useState(null);
   const [photoImagePlaceholder, setPhotoImagePlaceholder] = useState('ph ph-red');
   const [photoMsg, setPhotoMsg] = useState({ text: '', type: '' });
+
+  // Real-time Analytics state
+  const [analytics, setAnalytics] = useState({
+    totalArticles: 0,
+    totalCategories: 0,
+    totalSubscribers: 0,
+    totalViews: 0,
+    storyViews: 0,
+    articleViews: 0
+  });
+
+  // Edit Article Form States
+  const [editingArticle, setEditingArticle] = useState(null);
+  const [editNewsTitle, setEditNewsTitle] = useState('');
+  const [editNewsContent, setEditNewsContent] = useState('');
+  const [editNewsCategory, setEditNewsCategory] = useState('ರಾಜ್ಯ');
+  const [editNewsAuthor, setEditNewsAuthor] = useState('');
+  const [editNewsImageFile, setEditNewsImageFile] = useState(null);
+  const [editNewsImagePlaceholder, setEditNewsImagePlaceholder] = useState('ph ph-red');
+  const [editNewsImageSource, setEditNewsImageSource] = useState('keep'); // 'keep', 'placeholder', 'upload'
+  const [editNewsMsg, setEditNewsMsg] = useState({ text: '', type: '' });
+
+  // Image Cropper States
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [cropperImageSrc, setCropperImageSrc] = useState('');
+  const [cropperFilename, setCropperFilename] = useState('');
+  const [cropperCallback, setCropperCallback] = useState(null);
+
+  const openImageCropper = (file, callback) => {
+    if (!file) return;
+    setCropperFilename(file.name);
+    setCropperCallback(() => callback);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropperImageSrc(reader.result);
+      setCropperOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Verify token on mount/change
   useEffect(() => {
@@ -128,6 +177,18 @@ function AdminDashboard({ navigate }) {
       .then(res => res.json())
       .then(data => setPhotos(Array.isArray(data) ? data : []))
       .catch(err => console.error(err));
+
+    fetch('/api/admin/analytics', { headers })
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load analytics');
+        return res.json();
+      })
+      .then(data => {
+        if (data && !data.error) {
+          setAnalytics(data);
+        }
+      })
+      .catch(err => console.error('Error fetching analytics:', err));
   };
 
   const handleLogin = (e) => {
@@ -210,6 +271,61 @@ function AdminDashboard({ navigate }) {
       })
       .catch(err => {
         setNewsMsg({ text: 'Server error. Failed to add article.', type: 'error' });
+      });
+  };
+
+  // 📰 Edit Article Submit
+  const handleUpdateArticle = (e) => {
+    e.preventDefault();
+    setEditNewsMsg({ text: '', type: '' });
+
+    if (!editingArticle) return;
+    if (!editNewsTitle || !editNewsContent || !editNewsCategory) {
+      setEditNewsMsg({ text: 'Title, content and category are required', type: 'error' });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('title', editNewsTitle);
+    formData.append('content', editNewsContent);
+    formData.append('category', editNewsCategory);
+    formData.append('author', editNewsAuthor);
+    
+    if (editNewsImageSource === 'upload' && editNewsImageFile) {
+      formData.append('image', editNewsImageFile);
+    } else if (editNewsImageSource === 'placeholder') {
+      formData.append('image_url', editNewsImagePlaceholder);
+    } else {
+      // Keep existing image
+      formData.append('image_url', editingArticle.image_url);
+    }
+
+    fetch(`/api/admin/news/${editingArticle.id}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          setEditNewsMsg({ text: data.error, type: 'error' });
+        } else {
+          setEditNewsMsg({ text: '✅ Article updated successfully!', type: 'success' });
+          // Clear edit mode after short delay
+          setTimeout(() => {
+            setEditingArticle(null);
+            setEditNewsTitle('');
+            setEditNewsContent('');
+            setEditNewsAuthor('');
+            setEditNewsImageFile(null);
+            setEditNewsMsg({ text: '', type: '' });
+          }, 1000);
+          // Reload
+          loadDashboardData();
+        }
+      })
+      .catch(err => {
+        setEditNewsMsg({ text: 'Server error. Failed to update article.', type: 'error' });
       });
   };
 
@@ -457,7 +573,7 @@ function AdminDashboard({ navigate }) {
 
   // Category list matching our UI (standard categories + all 31 districts of Karnataka)
   const categories = [
-    'ರಾಜ್ಯ', 'ರಾಷ್ಟ್ರ', 'ಅಂತರರಾಷ್ಟ್ರೀಯ', 'ರಾಜಕೀಯ', 'ಕ್ರೀಡೆ', 'IPL 2025', 'ಮನರಂಜನೆ', 'ತಂತ್ರಜ್ಞಾನ', 'ಆರೋಗ್ಯ', 'ಅಭಿಪ್ರಾಯ',
+    'ಮುಖಪುಟ', 'ರಾಜ್ಯ', 'ರಾಷ್ಟ್ರ', 'ಅಂತರರಾಷ್ಟ್ರೀಯ', 'ರಾಜಕೀಯ', 'ಕ್ರೀಡೆ', 'IPL 2025', 'ಮನರಂಜನೆ', 'ತಂತ್ರಜ್ಞಾನ', 'ಆರೋಗ್ಯ', 'ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು', 'ಟ್ರೆಂಡಿಂಗ್',
     'ಬೆಂಗಳೂರು', 'ಬೆಂಗಳೂರು ಗ್ರಾಮಾಂತರ', 'ಮೈಸೂರು', 'ಮಂಗಳೂರು', 'ಹುಬ್ಬಳ್ಳಿ', 'ಧಾರವಾಡ', 'ಬೆಳಗಾವಿ',
     'ಕಲಬುರಗಿ', 'ಬಾಗಲಕೋಟೆ', 'ಬಳ್ಳಾರಿ', 'ಬೀದರ್', 'ಚಾಮರಾಜನಗರ', 'ಚಿಕ್ಕಬಳ್ಳಾಪುರ', 'ಚಿಕ್ಕಮಗಳೂರು',
     'ಚಿತ್ರದುರ್ಗ', 'ದಾವಣಗೆರೆ', 'ಗದಗ', 'ಹಾಸನ', 'ಹಾವೇರಿ', 'ಕೊಡಗು', 'ಕೋಲಾರ', 'ಕೊಪ್ಪಳ', 'ಮಂಡ್ಯ',
@@ -465,12 +581,38 @@ function AdminDashboard({ navigate }) {
     'ವಿಜಯಪುರ', 'ಯಾದಗಿರಿ'
   ];
 
+  const handleAddAdmin = (e) => {
+    e.preventDefault();
+    setAdminMsg(null);
+    fetch('/api/admin/collaborators', {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ mobileNumber: newAdminMobile, password: newAdminPassword })
+    })
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok || data.error) {
+          setAdminMsg({ text: data.error || 'Failed to create admin.', type: 'error' });
+        } else {
+          setAdminMsg({ text: '✅ Admin account created successfully!', type: 'success' });
+          setNewAdminMobile('');
+          setNewAdminPassword('');
+        }
+      })
+      .catch(err => setAdminMsg({ text: 'Server error.', type: 'error' }));
+  };
+
   // If token is missing, show Login Form
   if (!token) {
     return (
       <div className="admin-body">
         <div className="admin-login-card">
-          <h2>ಸಮಾಚಾರ ಸಂಗ್ರಹ</h2>
+          <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+            <img src="/IMG_1105.PNG" alt="ಸಮಾಚಾರ ಸಂಗ್ರಹ" style={{ height: '45px', width: 'auto', objectFit: 'contain', margin: '0 auto' }} />
+          </div>
           <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--admin-text-muted)', marginBottom: '20px' }}>
             ಅಡ್ಮಿನ್‌ ಲಾಗಿನ್ | ADMIN BACKOFFICE
           </p>
@@ -512,30 +654,18 @@ function AdminDashboard({ navigate }) {
   }
 
   return (
-    <div className="admin-body">
-      <div className="admin-dashboard-wrap">
-        
-        {/* Header */}
-        <div className="admin-header">
-          <div>
-            <h1>ಸಮಾಚಾರ ಸಂಗ್ರಹ - Admin Dashboard</h1>
-            <p style={{ fontSize: '12px', color: 'var(--admin-text-muted)' }}>ಸ್ಥಿತಿ: ಲಾಗ್ ಇನ್ ಆಗಿದೆ (ಅಡ್ಮಿನ್)</p>
-          </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="admin-btn" onClick={handleDownloadBackup} style={{ background: '#059669', color: '#fff', width: 'auto' }}>
-              💾 Download Backup
-            </button>
-            <button className="admin-btn" onClick={() => navigate('/')} style={{ background: '#475569', color: '#fff', width: 'auto' }}>
-              🌐 View Site
-            </button>
-            <button className="admin-btn-danger" onClick={handleLogout}>
-              Logout 🔒
-            </button>
-          </div>
+    <div className="admin-layout">
+      
+      {/* Sidebar Navigation */}
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-header">
+          <img src="/IMG_1105.PNG" alt="ಸಮಾಚಾರ ಸಂಗ್ರಹ" style={{ height: '35px', width: 'auto', objectFit: 'contain', background: '#fff', padding: '4px 8px', borderRadius: '4px', margin: '0 auto', display: 'block' }} />
+          <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '12px' }}>Admin Dashboard</p>
         </div>
-
-        {/* Tab Selection */}
         <div className="admin-nav">
+          <button className={`admin-nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            📊 Analytics Dashboard
+          </button>
           <button className={`admin-nav-item ${activeTab === 'news' ? 'active' : ''}`} onClick={() => setActiveTab('news')}>
             📰 News Articles
           </button>
@@ -544,9 +674,6 @@ function AdminDashboard({ navigate }) {
           </button>
           <button className={`admin-nav-item ${activeTab === 'videos' ? 'active' : ''}`} onClick={() => setActiveTab('videos')}>
             📹 Trending Reels
-          </button>
-          <button className={`admin-nav-item ${activeTab === 'opinions' ? 'active' : ''}`} onClick={() => setActiveTab('opinions')}>
-            💬 Opinions
           </button>
           <button className={`admin-nav-item ${activeTab === 'poll' ? 'active' : ''}`} onClick={() => setActiveTab('poll')}>
             📊 Live Poll
@@ -558,118 +685,925 @@ function AdminDashboard({ navigate }) {
             📧 Subscribers ({subscribers.length})
           </button>
         </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="admin-main">
+        {/* Top Header */}
+        <div className="admin-top-header">
+          <h2>
+            {activeTab === 'dashboard' ? 'Dashboard Overview' :
+             activeTab === 'news' ? 'Manage News Articles' :
+             activeTab === 'ticker' ? 'Ticker Tape' :
+             activeTab === 'videos' ? 'Trending Reels' :
+             activeTab === 'poll' ? 'Live Poll' :
+             activeTab === 'photos' ? 'Photo Gallery' :
+             'Subscribers'}
+          </h2>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="admin-btn" onClick={handleDownloadBackup} style={{ background: '#059669', color: '#fff', width: 'auto' }}>
+              💾 Download Backup
+            </button>
+            <button className="admin-btn" onClick={() => navigate('/')} style={{ background: '#475569', color: '#fff', width: 'auto' }}>
+              🌐 View Site
+            </button>
+            <button className="admin-btn-danger" onClick={handleLogout} style={{ width: 'auto' }}>
+              Logout 🔒
+            </button>
+          </div>
+        </div>
 
         {/* Dashboard Grid Panel content */}
         
+        {/* 0. ANALYTICS DASHBOARD TAB */}
+        {activeTab === 'dashboard' && (() => {
+          const calculateDaysLeft = () => {
+            const expiryDate = new Date('2027-05-11');
+            const currentDate = new Date('2026-06-06T22:08:05+05:30'); // Anchor to current time context
+            const diffTime = expiryDate - currentDate;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays > 0 ? diffDays : 0;
+          };
+
+          const visitorData = [
+            { label: 'Jul', val: 120 },
+            { label: 'Aug', val: 150 },
+            { label: 'Sep', val: 110 },
+            { label: 'Oct', val: 180 },
+            { label: 'Nov', val: 210 },
+            { label: 'Dec', val: 160 },
+            { label: 'Jan', val: 240 },
+            { label: 'Feb', val: 280 },
+            { label: 'Mar', val: 190 },
+            { label: 'Apr', val: 75430 },
+            { label: 'May', val: 122463 },
+            { label: 'Jun', val: analytics.totalViews }
+          ];
+
+          const installData = [
+            { label: 'Jul', val: 0 },
+            { label: 'Aug', val: 0 },
+            { label: 'Sep', val: 0 },
+            { label: 'Oct', val: 0 },
+            { label: 'Nov', val: 0 },
+            { label: 'Dec', val: 0 },
+            { label: 'Jan', val: 0 },
+            { label: 'Feb', val: 0 },
+            { label: 'Mar', val: 0 },
+            { label: 'Apr', val: 0 },
+            { label: 'May', val: 0 },
+            { label: 'Jun', val: 0 }
+          ];
+
+          const categoryCounts = {};
+          articles.forEach(art => {
+            const cat = art.category || 'ರಾಜ್ಯ';
+            categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+          });
+
+          let rawCategoryData = Object.entries(categoryCounts)
+            .map(([label, val]) => ({ label, val }))
+            .sort((a, b) => b.val - a.val);
+
+          if (rawCategoryData.length === 0) {
+            rawCategoryData = [
+              { label: 'ರಾಜ್ಯ', val: 10 },
+              { label: 'ರಾಷ್ಟ್ರ', val: 8 },
+              { label: 'ಕ್ರೀಡೆ', val: 6 },
+              { label: 'ರಾಜಕೀಯ', val: 4 },
+              { label: 'ಮನರಂಜನೆ', val: 3 }
+            ];
+          }
+
+          const activeCategoryData = rawCategoryData.slice(0, 10);
+          const maxCategoryVal = Math.max(...activeCategoryData.map(d => d.val), 10);
+
+          const maxVisitorValRaw = Math.max(...visitorData.map(d => d.val), 10);
+          const maxVisitorVal = Math.max(Math.ceil(maxVisitorValRaw * 1.2), 100);
+          const visitorTicks = [0, 0.2, 0.4, 0.6, 0.8, 1.0].map(pct => Math.round(pct * maxVisitorVal));
+
+          const getVisitorPath = () => {
+            return pointsToCubicSvg(visitorData.map((d, i) => ({
+              x: 80 + i * (860 / 11),
+              y: 260 - (d.val / maxVisitorVal) * 220
+            })));
+          };
+
+          const getVisitorAreaPath = () => {
+            const linePoints = visitorData.map((d, i) => ({
+              x: 80 + i * (860 / 11),
+              y: 260 - (d.val / maxVisitorVal) * 220
+            }));
+            const line = pointsToCubicSvg(linePoints);
+            const startX = 80;
+            const endX = 80 + 11 * (860 / 11);
+            return `${line} L ${endX} 260 L ${startX} 260 Z`;
+          };
+
+          const getCategoryPath = () => {
+            const den = Math.max(activeCategoryData.length - 1, 1);
+            return pointsToCubicSvg(activeCategoryData.map((d, i) => ({
+              x: 80 + i * (860 / den),
+              y: 260 - (d.val / maxCategoryVal) * 220
+            })));
+          };
+
+          const getCategoryAreaPath = () => {
+            const den = Math.max(activeCategoryData.length - 1, 1);
+            const linePoints = activeCategoryData.map((d, i) => ({
+              x: 80 + i * (860 / den),
+              y: 260 - (d.val / maxCategoryVal) * 220
+            }));
+            const line = pointsToCubicSvg(linePoints);
+            const startX = 80;
+            const endX = 80 + (activeCategoryData.length - 1) * (860 / den);
+            return `${line} L ${endX} 260 L ${startX} 260 Z`;
+          };
+
+          const maxInstallValRaw = Math.max(...installData.map(d => d.val), 10);
+          const maxInstallVal = Math.max(Math.ceil(maxInstallValRaw * 1.2), 10);
+          const installTicks = [0, 0.2, 0.4, 0.6, 0.8, 1.0].map(pct => Math.round(pct * maxInstallVal));
+
+          const getInstallPath = () => {
+            return installData.map((d, i) => {
+              const x = 80 + i * (860 / 11);
+              const y = 260 - (d.val / maxInstallVal) * 220;
+              return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).join(' ');
+          };
+
+          const getInstallAreaPath = () => {
+            const line = getInstallPath();
+            const startX = 80;
+            const endX = 80 + 11 * (860 / 11);
+            return `${line} L ${endX} 260 L ${startX} 260 Z`;
+          };
+
+          // Helper to smooth out points with a cubic curve
+          function pointsToCubicSvg(pts) {
+            if (pts.length === 0) return '';
+            let d = `M ${pts[0].x} ${pts[0].y}`;
+            for (let i = 0; i < pts.length - 1; i++) {
+              const p0 = pts[i];
+              const p1 = pts[i + 1];
+              // Control points for smooth curve
+              const cpX1 = p0.x + (p1.x - p0.x) / 3;
+              const cpY1 = p0.y;
+              const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
+              const cpY2 = p1.y;
+              d += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
+            }
+            return d;
+          }
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', animation: 'fadeIn 0.25s ease' }}>
+              {/* Top info strip removed per request */}
+
+              {/* Stats Cards Row */}
+              <div className="db-stats-grid">
+                <div className="db-stat-card purple">
+                  <div className="db-stat-label">Articles</div>
+                  <div className="db-stat-value">{analytics.totalArticles.toLocaleString()}</div>
+                  <div className="db-stat-icon">📰</div>
+                </div>
+                <div className="db-stat-card blue">
+                  <div className="db-stat-label">Categories</div>
+                  <div className="db-stat-value">{analytics.totalCategories.toLocaleString()}</div>
+                  <div className="db-stat-icon">🏷️</div>
+                </div>
+                <div className="db-stat-card green">
+                  <div className="db-stat-label">Subscribers</div>
+                  <div className="db-stat-value">{analytics.totalSubscribers.toLocaleString()}</div>
+                  <div className="db-stat-icon">👥</div>
+                </div>
+                <div className="db-stat-card orange">
+                  <div className="db-stat-label">Total Views</div>
+                  <div className="db-stat-value">{analytics.totalViews.toLocaleString()}</div>
+                  <div className="db-stat-icon">⏳</div>
+                </div>
+                <div className="db-stat-card pink">
+                  <div className="db-stat-label">Story Views</div>
+                  <div className="db-stat-value">{analytics.storyViews.toLocaleString()}</div>
+                  <div className="db-stat-icon">🖼️</div>
+                </div>
+                <div className="db-stat-card teal">
+                  <div className="db-stat-label">Latest Post</div>
+                  <div className="db-stat-value" style={{ fontSize: '11px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', marginTop: '6px' }}>
+                    {articles.length > 0 ? articles[0].title : 'No articles'}
+                  </div>
+                  <div className="db-stat-icon" style={{ opacity: 0.15 }}>📢</div>
+                </div>
+              </div>
+
+              {/* Main Charts & Widgets Grid */}
+              <div className="admin-grid-layout">
+                {/* Column 1: Line Chart */}
+                <div className="db-visitor-chart-card">
+                  <div className="db-chart-header">
+                    <div>
+                      <h3 className="db-chart-title">Visitor Analytics</h3>
+                    </div>
+                    <div className="db-chart-legend">
+                      This Month's Visitors: <span>{analytics.totalViews.toLocaleString()}</span>
+                    </div>
+                  </div>
+
+                  <div className="db-svg-chart-container">
+                    <svg viewBox="0 0 1000 320" className="db-svg-chart">
+                      <defs>
+                        <linearGradient id="green-grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#3dd580" stopOpacity="0.4" />
+                          <stop offset="100%" stopColor="#3dd580" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Grid Lines */}
+                      {visitorTicks.map((v) => {
+                        const y = 260 - (v / maxVisitorVal) * 220;
+                        return (
+                          <g key={v}>
+                            <line x1="80" y1={y} x2="940" y2={y} className="db-chart-grid-line" />
+                            <text x="70" y={y + 4} className="db-chart-label-y">{v.toLocaleString()}</text>
+                          </g>
+                        );
+                      })}
+
+                      {/* X Axis Labels */}
+                      {visitorData.map((d, i) => {
+                        const x = 80 + i * (860 / 11);
+                        return (
+                          <g key={d.label}>
+                            <line x1={x} y1="260" x2={x} y2="265" className="db-chart-axis-line" />
+                            <text x={x} y="285" className="db-chart-label">{d.label}</text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Area Under Line */}
+                      <path d={getVisitorAreaPath()} className="db-chart-area green" />
+
+                      {/* Line Path */}
+                      <path d={getVisitorPath()} className="db-chart-line green" />
+
+                      {/* Guide Dotted Line */}
+                      {visitorTooltip && (
+                        <line 
+                          x1={visitorTooltip.x} 
+                          y1={visitorTooltip.y} 
+                          x2={visitorTooltip.x} 
+                          y2="260" 
+                          stroke="#3dd580" 
+                          strokeWidth="1.5" 
+                          strokeDasharray="4 4" 
+                        />
+                      )}
+
+                      {/* Interactive Dots */}
+                      {visitorData.map((d, i) => {
+                        const x = 80 + i * (860 / 11);
+                        const y = 260 - (d.val / maxVisitorVal) * 220;
+                        const isHovered = visitorTooltip && visitorTooltip.label === d.label;
+                        return (
+                          <g key={d.label}>
+                            <circle 
+                              cx={x} 
+                              cy={y} 
+                              r={isHovered ? 6 : 4} 
+                              className={`db-chart-point green ${isHovered ? 'active' : ''}`} 
+                            />
+                            {/* Larger invisible overlay for easier mouse hovering */}
+                            <circle 
+                              cx={x} 
+                              cy={y} 
+                              r="20" 
+                              fill="transparent" 
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setVisitorTooltip({ x, y, label: d.label, val: d.val })}
+                              onMouseLeave={() => setVisitorTooltip(null)}
+                              onMouseMove={() => setVisitorTooltip({ x, y, label: d.label, val: d.val })}
+                            />
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    {/* Tooltip Card overlay */}
+                    {visitorTooltip && (
+                      <div 
+                        className="db-chart-tooltip" 
+                        style={{ 
+                          left: `${(visitorTooltip.x / 1000) * 100}%`, 
+                          top: `${(visitorTooltip.y / 320) * 100}%` 
+                        }}
+                      >
+                        <strong>{visitorTooltip.label}</strong>: {visitorTooltip.val.toLocaleString()} views
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Column 2: Collaborative Admin */}
+                <div>
+                  <div className="admin-card" style={{ marginBottom: '24px' }}>
+                    <h2 style={{ borderBottom: '1px solid var(--admin-border)', paddingBottom: '8px', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--admin-text-muted)', fontWeight: 800 }}>
+                      Add Admin Account
+                    </h2>
+                    <form onSubmit={handleAddAdmin}>
+                      {adminMsg && <div className={adminMsg.type === 'error' ? 'error-msg' : 'success-msg'} style={{ marginBottom: '12px' }}>{adminMsg.text}</div>}
+                      <div className="admin-form-group" style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '13px', display: 'block', marginBottom: '6px' }}>Mobile Number</label>
+                        <input 
+                          className="admin-input" 
+                          type="text" 
+                          value={newAdminMobile} 
+                          onChange={(e) => setNewAdminMobile(e.target.value)} 
+                          placeholder="e.g. 9876543210"
+                          required 
+                        />
+                      </div>
+                      <div className="admin-form-group" style={{ marginBottom: '16px' }}>
+                        <label style={{ fontSize: '13px', display: 'block', marginBottom: '6px' }}>Password</label>
+                        <input 
+                          className="admin-input" 
+                          type="password" 
+                          value={newAdminPassword} 
+                          onChange={(e) => setNewAdminPassword(e.target.value)} 
+                          required 
+                        />
+                      </div>
+                      <button className="admin-btn" type="submit">Create Admin</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              {/* Second Row Charts */}
+              <div className="admin-grid-layout" style={{ gridTemplateColumns: '1fr 1fr' }}>
+                {/* App Installation */}
+                <div className="db-visitor-chart-card">
+                  <div className="db-chart-header">
+                    <div>
+                      <h3 className="db-chart-title">App Installation (News Reads)</h3>
+                    </div>
+                  </div>
+
+                  <div className="db-svg-chart-container">
+                    <svg viewBox="0 0 1000 320" className="db-svg-chart">
+                      <defs>
+                        <linearGradient id="blue-grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#4ca1f5" stopOpacity="0.4" />
+                          <stop offset="100%" stopColor="#4ca1f5" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Grid Lines */}
+                      {installTicks.map((v) => {
+                        const y = 260 - (v / maxInstallVal) * 220;
+                        return (
+                          <g key={v}>
+                            <line x1="80" y1={y} x2="940" y2={y} className="db-chart-grid-line" />
+                            <text x="70" y={y + 4} className="db-chart-label-y">{v.toLocaleString()}</text>
+                          </g>
+                        );
+                      })}
+
+                      {/* X Axis Labels */}
+                      {installData.map((d, i) => {
+                        const x = 80 + i * (860 / 11);
+                        return (
+                          <g key={d.label}>
+                            <line x1={x} y1="260" x2={x} y2="265" className="db-chart-axis-line" />
+                            <text x={x} y="285" className="db-chart-label">{d.label}</text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Area Under Line */}
+                      <path d={getInstallAreaPath()} className="db-chart-area blue" />
+
+                      {/* Line Path */}
+                      <path d={getInstallPath()} className="db-chart-line blue" />
+
+                      {/* Guide Dotted Line */}
+                      {installTooltip && (
+                        <line 
+                          x1={installTooltip.x} 
+                          y1={installTooltip.y} 
+                          x2={installTooltip.x} 
+                          y2="260" 
+                          stroke="#4ca1f5" 
+                          strokeWidth="1.5" 
+                          strokeDasharray="4 4" 
+                        />
+                      )}
+
+                      {/* Interactive Dots */}
+                      {installData.map((d, i) => {
+                        const x = 80 + i * (860 / 11);
+                        const y = 260 - (d.val / maxInstallVal) * 220;
+                        const isHovered = installTooltip && installTooltip.label === d.label;
+                        return (
+                          <g key={d.label}>
+                            <circle 
+                              cx={x} 
+                              cy={y} 
+                              r={isHovered ? 6 : 4} 
+                              className={`db-chart-point blue ${isHovered ? 'active' : ''}`} 
+                            />
+                            {/* Larger invisible overlay for easier mouse hovering */}
+                            <circle 
+                              cx={x} 
+                              cy={y} 
+                              r="20" 
+                              fill="transparent" 
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setInstallTooltip({ x, y, label: d.label, val: d.val })}
+                              onMouseLeave={() => setInstallTooltip(null)}
+                              onMouseMove={() => setInstallTooltip({ x, y, label: d.label, val: d.val })}
+                            />
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    {/* Tooltip Card overlay */}
+                    {installTooltip && (
+                      <div 
+                        className="db-chart-tooltip" 
+                        style={{ 
+                          left: `${(installTooltip.x / 1000) * 100}%`, 
+                          top: `${(installTooltip.y / 320) * 100}%` 
+                        }}
+                      >
+                        <strong>{installTooltip.label}</strong>: {installTooltip.val} installs
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Category Analytics */}
+                <div className="db-visitor-chart-card">
+                  <div className="db-chart-header">
+                    <div>
+                      <h3 className="db-chart-title">Category Analytics</h3>
+                    </div>
+                  </div>
+
+                  <div className="db-svg-chart-container">
+                    <svg viewBox="0 0 1000 320" className="db-svg-chart">
+                      <defs>
+                        <linearGradient id="purple-grad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#b074f1" stopOpacity="0.4" />
+                          <stop offset="100%" stopColor="#b074f1" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Grid Lines */}
+                      {[0, 0.25, 0.5, 0.75, 1.0].map(pct => pct * maxCategoryVal).map((v, i) => {
+                        const y = 260 - (v / maxCategoryVal) * 220;
+                        return (
+                          <g key={i}>
+                            <line x1="80" y1={y} x2="940" y2={y} className="db-chart-grid-line" />
+                            <text x="70" y={y + 4} className="db-chart-label-y">{Math.round(v).toLocaleString()}</text>
+                          </g>
+                        );
+                      })}
+
+                      {/* X Axis Labels */}
+                      {activeCategoryData.map((d, i) => {
+                        const den = Math.max(activeCategoryData.length - 1, 1);
+                        const x = 80 + i * (860 / den);
+                        return (
+                          <g key={d.label}>
+                            <line x1={x} y1="260" x2={x} y2="265" className="db-chart-axis-line" />
+                            <text 
+                              x={x} 
+                              y="280" 
+                              className="db-chart-label" 
+                              style={{ fontSize: '10px', textAnchor: 'end' }}
+                              transform={`rotate(-25, ${x}, 280)`}
+                            >
+                              {d.label}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Area Under Line */}
+                      <path d={getCategoryAreaPath()} className="db-chart-area purple" />
+
+                      {/* Line Path */}
+                      <path d={getCategoryPath()} className="db-chart-line purple" />
+
+                      {/* Guide Dotted Line */}
+                      {categoryTooltip && (
+                        <line 
+                          x1={categoryTooltip.x} 
+                          y1={categoryTooltip.y} 
+                          x2={categoryTooltip.x} 
+                          y2="260" 
+                          stroke="#b074f1" 
+                          strokeWidth="1.5" 
+                          strokeDasharray="4 4" 
+                        />
+                      )}
+
+                      {/* Interactive Dots */}
+                      {activeCategoryData.map((d, i) => {
+                        const den = Math.max(activeCategoryData.length - 1, 1);
+                        const x = 80 + i * (860 / den);
+                        const y = 260 - (d.val / maxCategoryVal) * 220;
+                        const isHovered = categoryTooltip && categoryTooltip.label === d.label;
+                        return (
+                          <g key={d.label}>
+                            <circle 
+                              cx={x} 
+                              cy={y} 
+                              r={isHovered ? 6 : 4} 
+                              className={`db-chart-point purple ${isHovered ? 'active' : ''}`} 
+                            />
+                            {/* Larger invisible overlay for easier mouse hovering */}
+                            <circle 
+                              cx={x} 
+                              cy={y} 
+                              r="20" 
+                              fill="transparent" 
+                              style={{ cursor: 'pointer' }}
+                              onMouseEnter={() => setCategoryTooltip({ x, y, label: d.label, val: d.val })}
+                              onMouseLeave={() => setCategoryTooltip(null)}
+                              onMouseMove={() => setCategoryTooltip({ x, y, label: d.label, val: d.val })}
+                            />
+                          </g>
+                        );
+                      })}
+                    </svg>
+
+                    {/* Tooltip Card overlay */}
+                    {categoryTooltip && (
+                      <div 
+                        className="db-chart-tooltip" 
+                        style={{ 
+                          left: `${(categoryTooltip.x / 1000) * 100}%`, 
+                          top: `${(categoryTooltip.y / 320) * 100}%` 
+                        }}
+                      >
+                        <strong>{categoryTooltip.label}</strong>: {categoryTooltip.val.toLocaleString()} views
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Viewed Articles Table */}
+              <div className="admin-card" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h2 style={{ borderBottom: 'none', margin: 0, padding: 0 }}>Top Viewed Articles</h2>
+                  <button className="admin-btn-secondary" onClick={() => setActiveTab('news')} style={{ padding: '6px 14px', fontSize: '12.5px', marginRight: 0 }}>
+                    View All News
+                  </button>
+                </div>
+                {articles.length === 0 ? (
+                  <p style={{ color: 'var(--admin-text-muted)', fontSize: '13.5px', padding: '10px 0' }}>No articles published yet.</p>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="admin-table" style={{ width: '100%' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '50px' }}>#</th>
+                          <th style={{ width: '80px' }}>Image</th>
+                          <th>Article Title</th>
+                          <th style={{ width: '120px' }}>Views</th>
+                          <th style={{ width: '100px', textAlign: 'center' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...articles].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5).map((art, index) => {
+                          const views = art.views || 0;
+                          
+                          const renderThumbnail = () => {
+                            if (art.image_url && art.image_url.startsWith('ph ph-')) {
+                              return (
+                                <div className={`db-table-icon-fallback ${art.image_url}`}>
+                                  📰
+                                </div>
+                              );
+                            } else if (art.image_url) {
+                              return (
+                                <img src={art.image_url} alt="thumbnail" className="db-table-thumb" />
+                              );
+                            }
+                            return (
+                              <div className="db-table-icon-fallback ph ph-dark">
+                                📰
+                              </div>
+                            );
+                          };
+
+                          return (
+                            <tr key={art.id}>
+                              <td style={{ fontWeight: '700', color: 'var(--admin-text-muted)' }}>{index + 1}</td>
+                              <td>{renderThumbnail()}</td>
+                              <td style={{ fontWeight: '600' }}>{art.title}</td>
+                              <td>
+                                <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 8px', borderRadius: '20px', fontSize: '12px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  👁️ {views.toLocaleString()}
+                                </span>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <button className="db-table-btn" onClick={() => navigate(`/article/${art.id}`)}>
+                                  Open ↗
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 1. NEWS ARTICLES TAB */}
         {activeTab === 'news' && (
           <div className="admin-grid-layout">
             {/* Add News */}
             <div className="admin-card">
-              <h2>Post New Article</h2>
-              <form onSubmit={handleAddArticle}>
-                {newsMsg.text && (
-                  <div className={newsMsg.type === 'success' ? 'success-msg' : 'error-msg'}>
-                    {newsMsg.text}
-                  </div>
-                )}
-                <div className="admin-form-group">
-                  <label>Title (ಸುದ್ದಿ ಶೀರ್ಷಿಕೆ)</label>
-                  <input 
-                    className="admin-input" 
-                    type="text" 
-                    value={newsTitle} 
-                    onChange={(e) => setNewsTitle(e.target.value)} 
-                    required 
-                    placeholder="E.g., ಮೆಟ್ರೋ ಹೊಸ ಮಾರ್ಗ ಉದ್ಘಾಟನೆ"
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Content (ಸುದ್ದಿ ವಿವರ)</label>
-                  <textarea 
-                    className="admin-input admin-textarea" 
-                    value={newsContent} 
-                    onChange={(e) => setNewsContent(e.target.value)} 
-                    required 
-                    placeholder="ಇಲ್ಲಿ ವಿವರವಾದ ಸುದ್ದಿ ಪಠ್ಯವನ್ನು ಬರೆಯಿರಿ..."
-                  />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div className="admin-form-group">
-                    <label>Category (ವರ್ಗ)</label>
-                    <select 
-                      className="admin-input" 
-                      value={newsCategory} 
-                      onChange={(e) => setNewsCategory(e.target.value)}
-                    >
-                      {categories.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Author (ಲೇಖಕರು)</label>
-                    <input 
-                      className="admin-input" 
-                      type="text" 
-                      value={newsAuthor} 
-                      onChange={(e) => setNewsAuthor(e.target.value)} 
-                      placeholder="E.g., ರಾಜೇಶ್ ಹೆಗ್ಡೆ"
-                    />
-                  </div>
-                </div>
+              {editingArticle ? (
+                <>
+                  <h2 style={{ color: 'var(--admin-accent)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    ✏️ Edit Article (ಸುದ್ದಿ ತಿದ್ದುಪಡಿ)
+                  </h2>
+                  <form onSubmit={handleUpdateArticle}>
+                    {editNewsMsg.text && (
+                      <div className={editNewsMsg.type === 'success' ? 'success-msg' : 'error-msg'}>
+                        {editNewsMsg.text}
+                      </div>
+                    )}
+                    <div className="admin-form-group">
+                      <label>Title (ಸುದ್ದಿ ಶೀರ್ಷಿಕೆ)</label>
+                      <input 
+                        className="admin-input" 
+                        type="text" 
+                        value={editNewsTitle} 
+                        onChange={(e) => setEditNewsTitle(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div className="admin-form-group">
+                      <label>Content (ಸುದ್ದಿ ವಿವರ)</label>
+                      <textarea 
+                        className="admin-input admin-textarea" 
+                        value={editNewsContent} 
+                        onChange={(e) => setEditNewsContent(e.target.value)} 
+                        required 
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div className="admin-form-group">
+                        <label>Category (ವರ್ಗ)</label>
+                        <select 
+                          className="admin-input" 
+                          value={editNewsCategory} 
+                          onChange={(e) => setEditNewsCategory(e.target.value)}
+                        >
+                          {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Author (ಲೇಖಕರು)</label>
+                        <input 
+                          className="admin-input" 
+                          type="text" 
+                          value={editNewsAuthor} 
+                          onChange={(e) => setEditNewsAuthor(e.target.value)} 
+                        />
+                      </div>
+                    </div>
 
-                <div className="admin-form-group">
-                  <label>Article Image Source</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <input 
-                        type="radio" 
-                        name="img_source" 
-                        defaultChecked 
-                        onChange={() => setNewsImageFile(null)} 
-                      />
-                      Use CSS Gradient Placeholder
-                    </label>
-                    <select 
-                      className="admin-input" 
-                      value={newsImagePlaceholder} 
-                      onChange={(e) => setNewsImagePlaceholder(e.target.value)}
-                      disabled={newsImageFile !== null}
-                    >
-                      <option value="ph ph-red">Red Gradient</option>
-                      <option value="ph ph-blue">Blue Gradient</option>
-                      <option value="ph ph-green">Green Gradient</option>
-                      <option value="ph ph-orange">Orange Gradient</option>
-                      <option value="ph ph-purple">Purple Gradient</option>
-                      <option value="ph ph-teal">Teal Gradient</option>
-                      <option value="ph ph-dark">Charcoal Gradient</option>
-                    </select>
+                    <div className="admin-form-group">
+                      <label>Article Image Option</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                          <input 
+                            type="radio" 
+                            name="edit_img_source" 
+                            checked={editNewsImageSource === 'keep'} 
+                            onChange={() => setEditNewsImageSource('keep')} 
+                          />
+                          Keep Existing Image
+                        </label>
+                        {editNewsImageSource === 'keep' && editingArticle.image_url && (
+                          <div style={{ margin: '2px 0 6px 20px' }}>
+                            {editingArticle.image_url.startsWith('ph ph-') ? (
+                              <div className={`db-table-icon-fallback ${editingArticle.image_url}`} style={{ width: '80px', height: '45px', borderRadius: '4px' }}>📰</div>
+                            ) : (
+                              <img src={editingArticle.image_url} alt="Current" style={{ width: '100px', height: '56px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--admin-border)' }} />
+                            )}
+                          </div>
+                        )}
+                        
+                        <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                          <input 
+                            type="radio" 
+                            name="edit_img_source" 
+                            checked={editNewsImageSource === 'placeholder'} 
+                            onChange={() => setEditNewsImageSource('placeholder')} 
+                          />
+                          Use CSS Gradient Placeholder
+                        </label>
+                        <select 
+                          className="admin-input" 
+                          value={editNewsImagePlaceholder} 
+                          onChange={(e) => setEditNewsImagePlaceholder(e.target.value)}
+                          disabled={editNewsImageSource !== 'placeholder'}
+                        >
+                          <option value="ph ph-red">Red Gradient</option>
+                          <option value="ph ph-blue">Blue Gradient</option>
+                          <option value="ph ph-green">Green Gradient</option>
+                          <option value="ph ph-orange">Orange Gradient</option>
+                          <option value="ph ph-purple">Purple Gradient</option>
+                          <option value="ph ph-teal">Teal Gradient</option>
+                          <option value="ph ph-dark">Charcoal Gradient</option>
+                        </select>
+                        
+                        <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                          <input 
+                            type="radio" 
+                            name="edit_img_source" 
+                            checked={editNewsImageSource === 'upload'} 
+                            onChange={() => setEditNewsImageSource('upload')} 
+                            id="edit_img_upload_radio"
+                          />
+                          Upload & Crop New Image
+                        </label>
+                        <input 
+                          type="file" 
+                          className="admin-input" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              openImageCropper(file, (croppedFile) => {
+                                setEditNewsImageFile(croppedFile);
+                              });
+                            }
+                            setEditNewsImageSource('upload');
+                            document.getElementById('edit_img_upload_radio').checked = true;
+                          }}
+                        />
+                        {editNewsImageSource === 'upload' && editNewsImageFile && (
+                          <div style={{ margin: '4px 0 0 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '12.5px', color: '#16a34a', fontWeight: 'bold' }}>✓ Image adjusted & ready</span>
+                            <button type="button" className="admin-btn-secondary" style={{ padding: '2px 8px', fontSize: '11px', margin: 0 }} onClick={() => openImageCropper(editNewsImageFile, (file) => setEditNewsImageFile(file))}>
+                              Re-Adjust
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                     
-                    <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                      <button className="admin-btn" type="submit" style={{ flex: 1 }}>
+                        Save Edits 💾
+                      </button>
+                      <button 
+                        className="admin-btn-secondary" 
+                        type="button" 
+                        onClick={() => setEditingArticle(null)}
+                        style={{ flex: 1, border: '1px solid #cbd5e1' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                <>
+                  <h2>Post New Article</h2>
+                  <form onSubmit={handleAddArticle}>
+                    {newsMsg.text && (
+                      <div className={newsMsg.type === 'success' ? 'success-msg' : 'error-msg'}>
+                        {newsMsg.text}
+                      </div>
+                    )}
+                    <div className="admin-form-group">
+                      <label>Title (ಸುದ್ದಿ ಶೀರ್ಷಿಕೆ)</label>
                       <input 
-                        type="radio" 
-                        name="img_source" 
-                        id="img_upload_radio" 
+                        className="admin-input" 
+                        type="text" 
+                        value={newsTitle} 
+                        onChange={(e) => setNewsTitle(e.target.value)} 
+                        required 
+                        placeholder="E.g., ಮೆಟ್ರೋ ಹೊಸ ಮಾರ್ಗ ಉದ್ಘಾಟನೆ"
                       />
-                      Upload Custom Image File
-                    </label>
-                    <input 
-                      type="file" 
-                      className="admin-input" 
-                      accept="image/*"
-                      onChange={(e) => {
-                        setNewsImageFile(e.target.files[0]);
-                        document.getElementById('img_upload_radio').checked = true;
-                      }}
-                    />
-                  </div>
-                </div>
-                
-                <button className="admin-btn" type="submit" style={{ marginTop: '10px' }}>
-                  Publish News 🚀
-                </button>
-              </form>
+                    </div>
+                    <div className="admin-form-group">
+                      <label>Content (ಸುದ್ದಿ ವಿವರ)</label>
+                      <textarea 
+                        className="admin-input admin-textarea" 
+                        value={newsContent} 
+                        onChange={(e) => setNewsContent(e.target.value)} 
+                        required 
+                        placeholder="ಇಲ್ಲಿ ವಿವರವಾದ ಸುದ್ದಿ ಪಠ್ಯವನ್ನು ಬರೆಯಿರಿ..."
+                      />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                      <div className="admin-form-group">
+                        <label>Category (ವರ್ಗ)</label>
+                        <select 
+                          className="admin-input" 
+                          value={newsCategory} 
+                          onChange={(e) => setNewsCategory(e.target.value)}
+                        >
+                          {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="admin-form-group">
+                        <label>Author (ಲೇಖಕರು)</label>
+                        <input 
+                          className="admin-input" 
+                          type="text" 
+                          value={newsAuthor} 
+                          onChange={(e) => setNewsAuthor(e.target.value)} 
+                          placeholder="E.g., ರಾಜೇಶ್ ಹೆಗ್ಡೆ"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="admin-form-group">
+                      <label>Article Image Source</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <input 
+                            type="radio" 
+                            name="img_source" 
+                            defaultChecked 
+                            onChange={() => setNewsImageFile(null)} 
+                          />
+                          Use CSS Gradient Placeholder
+                        </label>
+                        <select 
+                          className="admin-input" 
+                          value={newsImagePlaceholder} 
+                          onChange={(e) => setNewsImagePlaceholder(e.target.value)}
+                          disabled={newsImageFile !== null}
+                        >
+                          <option value="ph ph-red">Red Gradient</option>
+                          <option value="ph ph-blue">Blue Gradient</option>
+                          <option value="ph ph-green">Green Gradient</option>
+                          <option value="ph ph-orange">Orange Gradient</option>
+                          <option value="ph ph-purple">Purple Gradient</option>
+                          <option value="ph ph-teal">Teal Gradient</option>
+                          <option value="ph ph-dark">Charcoal Gradient</option>
+                        </select>
+                        
+                        <label style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
+                          <input 
+                            type="radio" 
+                            name="img_source" 
+                            id="img_upload_radio" 
+                          />
+                          Upload Custom Image File
+                        </label>
+                        <input 
+                          type="file" 
+                          className="admin-input" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              openImageCropper(file, (croppedFile) => {
+                                setNewsImageFile(croppedFile);
+                              });
+                            }
+                            document.getElementById('img_upload_radio').checked = true;
+                          }}
+                        />
+                        {newsImageFile && (
+                          <div style={{ margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '12.5px', color: '#16a34a', fontWeight: 'bold' }}>✓ Image adjusted & ready</span>
+                            <button type="button" className="admin-btn-secondary" style={{ padding: '2px 8px', fontSize: '11px', margin: 0 }} onClick={() => openImageCropper(newsImageFile, (file) => setNewsImageFile(file))}>
+                              Re-Adjust
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <button className="admin-btn" type="submit" style={{ marginTop: '10px' }}>
+                      Publish News 🚀
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
 
             {/* List News */}
@@ -685,7 +1619,8 @@ function AdminDashboard({ navigate }) {
                   style={{ width: '200px', margin: 0, padding: '6px 12px', fontSize: '12px' }}
                 />
               </div>
-              <table className="admin-table">
+              <div className="admin-table-wrapper">
+                <table className="admin-table">
                 <thead>
                   <tr>
                     <th>Title</th>
@@ -702,11 +1637,29 @@ function AdminDashboard({ navigate }) {
                     )
                     .map(art => (
                       <tr key={art.id}>
-                        <td style={{ fontWeight: 600, color: '#fff' }}>{art.title}</td>
+                        <td style={{ fontWeight: 600 }}>{art.title}</td>
                         <td><span className="badge-admin-cat">{art.category}</span></td>
                         <td>{new Date(art.created_at).toLocaleDateString()}</td>
                         <td>
-                          <button className="admin-btn-danger" onClick={() => handleDeleteArticle(art.id)} style={{ padding: '4px 8px', fontSize: '11px' }}>
+                          <button 
+                            className="admin-btn" 
+                            onClick={() => {
+                              setEditingArticle(art);
+                              setEditNewsTitle(art.title);
+                              setEditNewsContent(art.content);
+                              setEditNewsCategory(art.category);
+                              setEditNewsAuthor(art.author || '');
+                              setEditNewsImageSource('keep');
+                              setEditNewsImageFile(null);
+                              setEditNewsMsg({ text: '', type: '' });
+                              // scroll form into view
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }} 
+                            style={{ padding: '4px 8px', fontSize: '11.5px', marginRight: '8px', background: '#2563eb', color: '#fff', width: 'auto', display: 'inline-block' }}
+                          >
+                            Edit
+                          </button>
+                          <button className="admin-btn-danger" onClick={() => handleDeleteArticle(art.id)} style={{ padding: '4px 8px', fontSize: '11.5px', width: 'auto', display: 'inline-block' }}>
                             Delete
                           </button>
                         </td>
@@ -716,6 +1669,7 @@ function AdminDashboard({ navigate }) {
               </table>
             </div>
           </div>
+        </div>
         )}
 
         {/* 2. TICKER TAPE TAB */}
@@ -746,6 +1700,7 @@ function AdminDashboard({ navigate }) {
 
             <div className="admin-card">
               <h2>Active Ticker Items</h2>
+            <div className="admin-table-wrapper">
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -756,7 +1711,7 @@ function AdminDashboard({ navigate }) {
                 <tbody>
                   {tickerItems.map(item => (
                     <tr key={item.id}>
-                      <td style={{ color: '#fff' }}>{item.message}</td>
+                      <td>{item.message}</td>
                       <td>
                         <button className="admin-btn-danger" onClick={() => handleDeleteTicker(item.id)} style={{ padding: '4px 8px', fontSize: '11px' }}>
                           Delete
@@ -768,6 +1723,7 @@ function AdminDashboard({ navigate }) {
               </table>
             </div>
           </div>
+        </div>
         )}
 
         {/* 3. TRENDING REELS TAB */}
@@ -854,10 +1810,23 @@ function AdminDashboard({ navigate }) {
                       className="admin-input" 
                       accept="image/*"
                       onChange={(e) => {
-                        setVideoImageFile(e.target.files[0]);
+                        const file = e.target.files[0];
+                        if (file) {
+                          openImageCropper(file, (croppedFile) => {
+                            setVideoImageFile(croppedFile);
+                          });
+                        }
                         document.getElementById('video_upload_radio').checked = true;
                       }}
                     />
+                    {videoImageFile && (
+                      <div style={{ margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '12.5px', color: '#16a34a', fontWeight: 'bold' }}>✓ Image adjusted & ready</span>
+                        <button type="button" className="admin-btn-secondary" style={{ padding: '2px 8px', fontSize: '11px', margin: 0 }} onClick={() => openImageCropper(videoImageFile, (file) => setVideoImageFile(file))}>
+                          Re-Adjust
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -867,6 +1836,7 @@ function AdminDashboard({ navigate }) {
 
             <div className="admin-card">
               <h2>Reels List</h2>
+            <div className="admin-table-wrapper">
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -886,7 +1856,7 @@ function AdminDashboard({ navigate }) {
                         )}
                       </td>
                       <td>
-                        <div style={{ color: '#fff', fontWeight: 600, fontSize: '13px' }}>{v.title}</div>
+                        <div style={{ fontWeight: 600, fontSize: '13px' }}>{v.title}</div>
                         <a href={v.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--gold)', textDecoration: 'underline' }}>{v.video_url}</a>
                       </td>
                       <td>
@@ -899,106 +1869,6 @@ function AdminDashboard({ navigate }) {
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* 4. OPINIONS TAB */}
-        {activeTab === 'opinions' && (
-          <div className="admin-grid-layout">
-            <div className="admin-card">
-              <h2>Write Opinion / Editorial</h2>
-              <form onSubmit={handleAddOpinion}>
-                {opinionMsg.text && (
-                  <div className={opinionMsg.type === 'success' ? 'success-msg' : 'error-msg'}>
-                    {opinionMsg.text}
-                  </div>
-                )}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr', gap: '14px' }}>
-                  <div className="admin-form-group">
-                    <label>Author Name (ಲೇಖಕರ ಹೆಸರು)</label>
-                    <input 
-                      className="admin-input" 
-                      type="text" 
-                      value={opinionAuthor} 
-                      onChange={(e) => setOpinionAuthor(e.target.value)} 
-                      required 
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Role (ಪಾತ್ರ)</label>
-                    <input 
-                      className="admin-input" 
-                      type="text" 
-                      value={opinionRole} 
-                      onChange={(e) => setOpinionRole(e.target.value)} 
-                      placeholder="ಹಿರಿಯ ಸಂಪಾದಕ"
-                    />
-                  </div>
-                  <div className="admin-form-group">
-                    <label>Avatar Emoji</label>
-                    <select 
-                      className="admin-input" 
-                      value={opinionAvatar} 
-                      onChange={(e) => setOpinionAvatar(e.target.value)}
-                    >
-                      <option value="👨">👨 Man</option>
-                      <option value="👩">👩 Woman</option>
-                      <option value="👨‍💼">👨‍💼 Business Man</option>
-                      <option value="👩‍💼">👩‍💼 Business Woman</option>
-                      <option value="👴">👴 Elder Man</option>
-                      <option value="👵">👵 Elder Woman</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="admin-form-group">
-                  <label>Opinion Headline (ಮುಖ್ಯ ಹೆಡ್‌ಲೈನ್)</label>
-                  <input 
-                    className="admin-input" 
-                    type="text" 
-                    value={opinionHeadline} 
-                    onChange={(e) => setOpinionHeadline(e.target.value)} 
-                    required 
-                    placeholder="E.g., ಕರ್ನಾಟಕದ ನೀರಾವರಿ ಬಿಕ್ಕಟ್ಟು — ನಾವು ಎಲ್ಲಿ ತಪ್ಪಾದೆವು?"
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Quote Content (ಅಭಿಪ್ರಾಯದ ಆಯ್ದ ಭಾಗ)</label>
-                  <textarea 
-                    className="admin-input admin-textarea" 
-                    value={opinionQuote} 
-                    onChange={(e) => setOpinionQuote(e.target.value)} 
-                    required 
-                    placeholder="ಕಾವೇರಿ ನೀರಿನ ವಿವಾದ ಹಳೆಯದಾದರೂ ಪರಿಹಾರ ಇಂದಿಗೂ ಮರೀಚಿಕೆಯಾಗಿದೆ..."
-                  />
-                </div>
-                <button className="admin-btn" type="submit">Publish Opinion 💬</button>
-              </form>
-            </div>
-
-            <div className="admin-card">
-              <h2>Editorials List</h2>
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>Author</th>
-                    <th>Headline</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {opinions.map(op => (
-                    <tr key={op.id}>
-                      <td style={{ color: '#fff' }}>{op.author_avatar} {op.author_name}</td>
-                      <td>{op.headline}</td>
-                      <td>
-                        <button className="admin-btn-danger" onClick={() => handleDeleteOpinion(op.id)} style={{ padding: '4px 8px', fontSize: '11px' }}>
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
         )}
@@ -1080,7 +1950,7 @@ function AdminDashboard({ navigate }) {
               <h2>Current Live Poll</h2>
               {activePoll ? (
                 <div>
-                  <h3 style={{ color: '#fff', fontSize: '15px', marginBottom: '14px' }}>Q: {activePoll.question}</h3>
+                  <h3 style={{ fontSize: '15px', marginBottom: '14px' }}>Q: {activePoll.question}</h3>
                   {activePoll.options.map(opt => {
                     const votes = activePoll.votes[opt] || 0;
                     return (
@@ -1107,6 +1977,7 @@ function AdminDashboard({ navigate }) {
             {subscribers.length === 0 ? (
               <p>No subscribers yet.</p>
             ) : (
+            <div className="admin-table-wrapper">
               <table className="admin-table" style={{ width: '100%' }}>
                 <thead>
                   <tr>
@@ -1123,6 +1994,7 @@ function AdminDashboard({ navigate }) {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         )}
@@ -1189,10 +2061,23 @@ function AdminDashboard({ navigate }) {
                       className="admin-input" 
                       accept="image/*"
                       onChange={(e) => {
-                        setPhotoImageFile(e.target.files[0]);
+                        const file = e.target.files[0];
+                        if (file) {
+                          openImageCropper(file, (croppedFile) => {
+                            setPhotoImageFile(croppedFile);
+                          });
+                        }
                         document.getElementById('photo_upload_radio').checked = true;
                       }}
                     />
+                    {photoImageFile && (
+                      <div style={{ margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 'bold' }}>✓ Photo adjusted & ready</span>
+                        <button type="button" className="admin-btn-secondary" style={{ padding: '2px 8px', fontSize: '11px', margin: 0 }} onClick={() => openImageCropper(photoImageFile, (file) => setPhotoImageFile(file))}>
+                          Re-Adjust
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button className="admin-btn" type="submit">Add Photo 📷</button>
@@ -1201,6 +2086,7 @@ function AdminDashboard({ navigate }) {
 
             <div className="admin-card">
               <h2>Gallery Photos</h2>
+            <div className="admin-table-wrapper">
               <table className="admin-table">
                 <thead>
                   <tr>
@@ -1219,7 +2105,7 @@ function AdminDashboard({ navigate }) {
                           <img src={p.image_url} alt="thumbnail" style={{ width: '40px', height: '40px', objectFit: 'contain', borderRadius: '4px', background: '#222' }} />
                         )}
                       </td>
-                      <td style={{ color: '#fff' }}>{p.caption}</td>
+                      <td>{p.caption}</td>
                       <td>
                         <button className="admin-btn-danger" onClick={() => handleDeletePhoto(p.id)} style={{ padding: '4px 8px', fontSize: '11px' }}>
                           Delete
@@ -1231,8 +2117,257 @@ function AdminDashboard({ navigate }) {
               </table>
             </div>
           </div>
+        </div>
         )}
 
+        {/* Image Cropper Modal */}
+        <ImageAdjusterModal 
+          isOpen={cropperOpen}
+          imageSrc={cropperImageSrc}
+          filename={cropperFilename}
+          onClose={() => setCropperOpen(false)}
+          onApply={(croppedFile) => {
+            if (cropperCallback) cropperCallback(croppedFile);
+            setCropperOpen(false);
+          }}
+        />      </main>
+    </div>
+  );
+}
+
+// 🎨 Image Adjuster / Cropper component
+function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
+  const [zoom, setZoom] = useState(1.0);
+  const [rotation, setRotation] = useState(0);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  
+  const canvasRef = React.useRef(null);
+  const imgRef = React.useRef(null);
+  const touchStartDistRef = React.useRef(0);
+  const touchStartZoomRef = React.useRef(1.0);
+
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [renderSize, setRenderSize] = useState({ width: 0, height: 0 });
+
+  // Reset when modal opens with new image
+  useEffect(() => {
+    if (isOpen && imageSrc) {
+      setZoom(1.0);
+      setRotation(0);
+      setOffsetX(0);
+      setOffsetY(0);
+      
+      const img = new Image();
+      img.onload = () => {
+        imgRef.current = img;
+        const canvasRatio = 640 / 360; // 16:9
+        const imgRatio = img.width / img.height;
+        let w, h;
+        if (imgRatio > canvasRatio) {
+          h = 360;
+          w = 360 * imgRatio;
+        } else {
+          w = 640;
+          h = 640 / imgRatio;
+        }
+        setRenderSize({ width: w, height: h });
+      };
+      img.src = imageSrc;
+    }
+  }, [isOpen, imageSrc]);
+
+  // Redraw canvas on zoom, rotation, offset, or image load change
+  useEffect(() => {
+    if (!isOpen || !imgRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = imgRef.current;
+
+    // Clear canvas
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    // Centered transformation
+    ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(zoom, zoom);
+    
+    // Draw image centered
+    ctx.drawImage(img, -renderSize.width / 2, -renderSize.height / 2, renderSize.width, renderSize.height);
+    ctx.restore();
+
+    // Draw grid overlay for crop frame visual help
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    // Thirds lines
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 3, 0);
+    ctx.lineTo(canvas.width / 3, canvas.height);
+    ctx.moveTo((canvas.width * 2) / 3, 0);
+    ctx.lineTo((canvas.width * 2) / 3, canvas.height);
+    ctx.moveTo(0, canvas.height / 3);
+    ctx.lineTo(canvas.width, canvas.height / 3);
+    ctx.moveTo(0, (canvas.height * 2) / 3);
+    ctx.lineTo(canvas.width, (canvas.height * 2) / 3);
+    ctx.stroke();
+
+    // Border
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+  }, [isOpen, zoom, rotation, offsetX, offsetY, renderSize]);
+
+  // Dragging event handlers (Mouse)
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - offsetX, y: e.clientY - offsetY });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setOffsetX(e.clientX - dragStart.x);
+    setOffsetY(e.clientY - dragStart.y);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Touch event handlers (Mobile)
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      const touch = e.touches[0];
+      setDragStart({ x: touch.clientX - offsetX, y: touch.clientY - offsetY });
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      touchStartDistRef.current = dist;
+      touchStartZoomRef.current = zoom;
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (e.touches.length === 1 && isDragging) {
+      const touch = e.touches[0];
+      setOffsetX(touch.clientX - dragStart.x);
+      setOffsetY(touch.clientY - dragStart.y);
+    } else if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (touchStartDistRef.current > 0) {
+        const ratio = dist / touchStartDistRef.current;
+        const newZoom = Math.min(Math.max(touchStartZoomRef.current * ratio, 1.0), 4.0);
+        setZoom(newZoom);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+    touchStartDistRef.current = 0;
+  };
+
+  // Scroll wheel to zoom
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const zoomStep = 0.05;
+    const factor = e.deltaY < 0 ? 1 : -1;
+    const newZoom = Math.min(Math.max(zoom + factor * zoomStep, 1.0), 4.0);
+    setZoom(newZoom);
+  };
+
+  const handleSave = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = new File([blob], filename || 'cropped.jpg', { type: 'image/jpeg' });
+      onApply(file);
+    }, 'image/jpeg', 0.9);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="cropper-modal-overlay">
+      <div className="cropper-modal">
+        <div className="cropper-modal-header">
+          <h3>Crop & Adjust Image (16:9 Aspect Ratio)</h3>
+          <button className="cropper-modal-close" onClick={onClose}>&times;</button>
+        </div>
+        
+        <div 
+          className="cropper-canvas-container"
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onWheel={handleWheel}
+        >
+          <canvas 
+            ref={canvasRef} 
+            width={640} 
+            height={360} 
+            className="cropper-canvas"
+          />
+        </div>
+
+        <div className="cropper-controls">
+          <div className="cropper-control-row">
+            <label>Zoom Slider:</label>
+            <input 
+              type="range" 
+              min="1.0" 
+              max="4.0" 
+              step="0.05"
+              value={zoom} 
+              onChange={(e) => setZoom(parseFloat(e.target.value))} 
+            />
+            <span style={{ minWidth: '40px', textAlign: 'right' }}>{zoom.toFixed(2)}x</span>
+          </div>
+
+          <div className="cropper-control-row">
+            <label>Fine Rotation:</label>
+            <input 
+              type="range" 
+              min="0" 
+              max="360" 
+              step="1"
+              value={rotation} 
+              onChange={(e) => setRotation(parseInt(e.target.value))} 
+            />
+            <span style={{ minWidth: '40px', textAlign: 'right' }}>{rotation}°</span>
+          </div>
+
+          <div className="cropper-btn-group">
+            <button type="button" onClick={() => setRotation((r) => (r - 90 + 360) % 360)}>Rotate ↺ 90°</button>
+            <button type="button" onClick={() => setRotation((r) => (r + 90) % 360)}>Rotate ↻ 90°</button>
+            <button type="button" onClick={() => {
+              setZoom(1.0);
+              setRotation(0);
+              setOffsetX(0);
+              setOffsetY(0);
+            }}>Reset All ↺</button>
+            <span style={{ fontSize: '11px', color: 'var(--admin-text-muted)', marginLeft: 'auto' }}>
+              💡 Hint: Drag to position, scroll wheel to zoom
+            </span>
+          </div>
+        </div>
+
+        <div className="cropper-actions">
+          <button type="button" className="cancel" onClick={onClose}>Cancel</button>
+          <button type="button" className="apply" onClick={handleSave}>Apply Crop & Save</button>
+        </div>
       </div>
     </div>
   );

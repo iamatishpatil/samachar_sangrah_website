@@ -5,6 +5,16 @@ const fs = require('fs');
 const db = require('../db.cjs');
 const authenticateToken = require('../middleware/auth.cjs');
 const { upload } = require('../middleware/upload.cjs');
+const bcrypt = require('bcryptjs');
+
+// Helper to get image url from multer file (supports Cloudinary and local)
+const getImageUrl = (file) => {
+  if (!file) return null;
+  if (file.path && file.path.startsWith('http')) {
+    return file.path;
+  }
+  return '/uploads/' + file.filename;
+};
 
 // Post news article
 router.post('/news', authenticateToken, upload.single('image'), (req, res) => {
@@ -15,9 +25,9 @@ router.post('/news', authenticateToken, upload.single('image'), (req, res) => {
     return res.status(400).json({ error: 'Title, content, and category are required' });
   }
 
-  // If a file was uploaded, set image_url to the relative file path
+  // If a file was uploaded, set image_url to the relative file path or cloud url
   if (req.file) {
-    image_url = '/uploads/' + req.file.filename;
+    image_url = getImageUrl(req.file);
   }
 
   const finalAuthor = author || 'ಸಂಪಾದಕರು';
@@ -107,7 +117,7 @@ router.post('/videos', authenticateToken, upload.single('image'), (req, res) => 
   const finalVideoUrl = video_url || '#';
   let finalImageUrl = req.body.image_url || 'ph ph-red';
   if (req.file) {
-    finalImageUrl = '/uploads/' + req.file.filename;
+    finalImageUrl = getImageUrl(req.file);
   }
 
   db.run(
@@ -266,9 +276,8 @@ router.get('/backup', authenticateToken, (req, res) => {
 router.post('/photos', authenticateToken, upload.single('image'), (req, res) => {
   const { caption } = req.body;
   let image_url = req.body.image_url || 'ph ph-red'; 
-
   if (req.file) {
-    image_url = '/uploads/' + req.file.filename;
+    image_url = getImageUrl(req.file);
   }
 
   db.run(
@@ -313,6 +322,127 @@ router.delete('/photos/:id', authenticateToken, (req, res) => {
       res.json({ success: true, message: 'Photo deleted successfully' });
     });
   });
+});
+
+// Update news article
+router.put('/news/:id', authenticateToken, upload.single('image'), (req, res) => {
+  const { id } = req.params;
+  const { title, content, category, author } = req.body;
+  let image_url = req.body.image_url;
+
+  if (!title || !content || !category) {
+    return res.status(400).json({ error: 'Title, content, and category are required' });
+  }
+
+  const finalAuthor = author || 'ಸಂಪಾದಕರು';
+
+  const performUpdate = (finalImageUrl) => {
+    const sql = finalImageUrl 
+      ? 'UPDATE articles SET title = ?, content = ?, category = ?, image_url = ?, author = ? WHERE id = ?'
+      : 'UPDATE articles SET title = ?, content = ?, category = ?, author = ? WHERE id = ?';
+    
+    const params = finalImageUrl
+      ? [title, content, category, finalImageUrl, finalAuthor, id]
+      : [title, content, category, finalAuthor, id];
+
+    db.run(sql, params, function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({
+        success: true,
+        message: 'Article updated successfully',
+        article: {
+          id: parseInt(id),
+          title,
+          content,
+          category,
+          image_url: finalImageUrl || undefined,
+          author: finalAuthor
+        }
+      });
+    });
+  };
+
+  const newFileUploaded = !!req.file;
+  const switchedToPlaceholder = image_url && image_url.startsWith('ph ph-');
+
+  if (newFileUploaded || switchedToPlaceholder) {
+    db.get('SELECT image_url FROM articles WHERE id = ?', [id], (err, row) => {
+      if (!err && row && row.image_url && row.image_url.startsWith('/uploads/')) {
+        const oldImagePath = path.join(__dirname, '../public', row.image_url);
+        if (fs.existsSync(oldImagePath)) {
+          fs.unlinkSync(oldImagePath);
+        }
+      }
+      
+      const nextImageUrl = newFileUploaded ? getImageUrl(req.file) : image_url;
+      performUpdate(nextImageUrl);
+    });
+  } else {
+    performUpdate(image_url);
+  }
+});
+
+// Get real-time database analytics
+router.get('/analytics', authenticateToken, (req, res) => {
+  db.get('SELECT COUNT(*) as count FROM articles', [], (err1, rArticles) => {
+    if (err1) return res.status(500).json({ error: err1.message });
+    
+    db.get('SELECT COUNT(DISTINCT category) as count FROM articles', [], (err2, rCategories) => {
+      if (err2) return res.status(500).json({ error: err2.message });
+      
+      db.get('SELECT COUNT(*) as count FROM subscribers', [], (err3, rSubscribers) => {
+        if (err3) return res.status(500).json({ error: err3.message });
+        
+        db.get('SELECT SUM(COALESCE(views, 0)) as total FROM articles', [], (err4, rArticleViews) => {
+          if (err4) return res.status(500).json({ error: err4.message });
+          
+          db.get('SELECT SUM(COALESCE(views, 0)) as total FROM photos', [], (err5, rPhotoViews) => {
+            if (err5) return res.status(500).json({ error: err5.message });
+            
+            const totalArticleViews = parseInt(rArticleViews.total) || 0;
+            const totalPhotoViews = parseInt(rPhotoViews.total) || 0;
+            
+            res.json({
+              totalArticles: parseInt(rArticles.count) || 0,
+              totalCategories: parseInt(rCategories.count) || 0,
+              totalSubscribers: parseInt(rSubscribers.count) || 0,
+              totalViews: totalArticleViews + totalPhotoViews,
+              storyViews: totalPhotoViews,
+              articleViews: totalArticleViews
+            });
+          });
+        });
+      });
+    });
+  });
+  });
+});
+
+// Create new collaborative admin
+router.post('/collaborators', authenticateToken, async (req, res) => {
+  const { mobileNumber, password } = req.body;
+  if (!mobileNumber || !password) {
+    return res.status(400).json({ error: 'Mobile number and password are required' });
+  }
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+
+    db.run('INSERT INTO users (username, password_hash) VALUES (?, ?)', [mobileNumber, hash], function(err) {
+      if (err) {
+        if (err.message && err.message.includes('unique constraint')) {
+          return res.status(400).json({ error: 'An admin with this mobile number already exists.' });
+        }
+        return res.status(500).json({ error: err.message });
+      }
+      res.json({ success: true, message: 'Collaborator added successfully' });
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

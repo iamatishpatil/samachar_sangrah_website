@@ -26,7 +26,7 @@ function NavBar({
 
   const currentDropdownValue = KARNATAKA_DISTRICTS.includes(selectedCategory)
     ? selectedCategory
-    : activeCity;
+    : "";
 
   const closeDrawer = () => setDrawerOpen(false);
 
@@ -136,8 +136,8 @@ function NavBar({
         <div className="container">
           {/* 🔍 Search / Drawer toggle — first */}
           <div className="nav-search-wrap" style={{
-            marginLeft: 0, marginRight: '4px',
-            paddingRight: '8px',
+            marginLeft: 0, marginRight: '8px',
+            paddingRight: '12px',
             borderRight: '1.5px solid rgba(0,0,0,0.15)',
             flexShrink: 0,
           }}>
@@ -151,35 +151,30 @@ function NavBar({
             </button>
           </div>
 
-          {categories.map(cat => {
-            const isHome = cat === 'ಮುಖಪುಟ';
-            return (
-              <React.Fragment key={cat}>
-                <a
-                  className={`nav-link ${selectedCategory === cat ? 'active' : ''}`}
-                  onClick={() => onCategorySelect(cat)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {cat}
-                </a>
-                {isHome && (
-                  <div className="nav-district-selector">
-                    <span className="nav-district-label">ನಿಮ್ಮ ಜಿಲ್ಲೆ:</span>
-                    <select
-                      value={currentDropdownValue}
-                      onChange={(e) => handleCityChange(e.target.value)}
-                      className="nav-district-select"
-                      aria-label="ಸ್ಥಳ ಆಯ್ಕೆ ಮಾಡಿ"
-                    >
-                      {KARNATAKA_DISTRICTS.map(dist => (
-                        <option key={dist} value={dist}>{dist}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
+          <div className="nav-district-selector" style={{ marginRight: '16px', flexShrink: 0 }}>
+            <select
+              value={currentDropdownValue}
+              onChange={(e) => handleCityChange(e.target.value)}
+              className="nav-district-select"
+              aria-label="ಸ್ಥಳ ಆಯ್ಕೆ ಮಾಡಿ"
+            >
+              <option value="" disabled hidden>ನಿಮ್ಮ ಜಿಲ್ಲೆ</option>
+              {KARNATAKA_DISTRICTS.map(dist => (
+                <option key={dist} value={dist}>{dist}</option>
+              ))}
+            </select>
+          </div>
+
+          {categories.map(cat => (
+            <a
+              key={cat}
+              className={`nav-link ${selectedCategory === cat ? 'active' : ''}`}
+              onClick={() => onCategorySelect(cat)}
+              style={{ cursor: 'pointer' }}
+            >
+              {cat}
+            </a>
+          ))}
         </div>
       </nav>
     </>

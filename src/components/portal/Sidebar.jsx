@@ -163,7 +163,7 @@ function Sidebar({
         <div className="widget-body">
           {trendingArticles.map((art, idx) => (
             <div key={art.id} className="trend-item" onClick={() => onCategorySelect(art.category)} style={{ cursor: 'pointer' }}>
-              <div className="trend-num">{idx + 1}</div>
+              <div className="trend-num" style={{ fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>•</div>
               <div>
                 <div className="trend-title">{art.title}</div>
                 <div className="list-meta">🕐 {new Date(art.created_at).toLocaleDateString('kn-IN')}</div>
@@ -191,11 +191,16 @@ function Sidebar({
 
       {/* PHOTO GALLERY */}
       <div className="widget">
-        <div className="widget-head">📷 ಫೋಟೋ ಗ್ಯಾಲರಿ</div>
+        <div className="widget-head">
+          📷 ಫೋಟೋ ಗ್ಯಾಲರಿ
+          <span className="widget-head-more" onClick={() => onCategorySelect('ಫೋಟೋ ಗ್ಯಾಲರಿ')} style={{ cursor: 'pointer' }}>
+            View More →
+          </span>
+        </div>
         <div className="gallery-grid">
           {photos.length > 0 ? (
             photos.slice(0, 4).map(photo => (
-              <div key={photo.id} className="gallery-item" style={{ cursor: 'pointer', background: '#000' }}>
+              <div key={photo.id} className="gallery-item" onClick={() => onCategorySelect('ಫೋಟೋ ಗ್ಯಾಲರಿ')} style={{ cursor: 'pointer', background: '#000' }}>
                 <Thumbnail imageUrl={photo.image_url} category="📸" heightClass="75px" objectFit="contain" />
                 <div className="gallery-cap">{photo.caption}</div>
               </div>
