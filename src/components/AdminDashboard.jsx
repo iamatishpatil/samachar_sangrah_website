@@ -2141,6 +2141,7 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
   const [rotation, setRotation] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
+  const [selectedRatio, setSelectedRatio] = useState('16:9');
   
   const canvasRef = React.useRef(null);
   const imgRef = React.useRef(null);
@@ -2151,32 +2152,63 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [renderSize, setRenderSize] = useState({ width: 0, height: 0 });
 
-  // Reset when modal opens with new image
+  const ratios = {
+    '16:9': { width: 640, height: 360, label: 'Standard News Card (16:9)' },
+    '4:3': { width: 640, height: 480, label: 'List Thumbnail (4:3)' },
+    '9:16': { width: 360, height: 640, label: 'Reel/Video (9:16)' },
+    '1:1': { width: 500, height: 500, label: 'Square/Profile (1:1)' },
+    'original': { width: 640, height: 640, label: 'Freeform / Original' }
+  };
+
+  const currentConfig = ratios[selectedRatio] || ratios['16:9'];
+
+  // Reset zoom and ratio when modal opens
   useEffect(() => {
-    if (isOpen && imageSrc) {
+    if (isOpen) {
       setZoom(1.0);
       setRotation(0);
       setOffsetX(0);
       setOffsetY(0);
-      
+      setSelectedRatio('16:9');
+    }
+  }, [isOpen]);
+
+  // Recalculate render size when image or ratio changes
+  useEffect(() => {
+    if (isOpen && imageSrc) {
       const img = new Image();
       img.onload = () => {
         imgRef.current = img;
-        const canvasRatio = 640 / 360; // 16:9
+        
+        let canvasW = currentConfig.width;
+        let canvasH = currentConfig.height;
+        
+        if (selectedRatio === 'original') {
+           const ratio = img.width / img.height;
+           if (ratio > 1) {
+              canvasW = 640;
+              canvasH = 640 / ratio;
+           } else {
+              canvasH = 640;
+              canvasW = 640 * ratio;
+           }
+        }
+        
+        const canvasRatio = canvasW / canvasH;
         const imgRatio = img.width / img.height;
         let w, h;
         if (imgRatio > canvasRatio) {
-          h = 360;
-          w = 360 * imgRatio;
+          h = canvasH;
+          w = canvasH * imgRatio;
         } else {
-          w = 640;
-          h = 640 / imgRatio;
+          w = canvasW;
+          h = canvasW / imgRatio;
         }
         setRenderSize({ width: w, height: h });
       };
       img.src = imageSrc;
     }
-  }, [isOpen, imageSrc]);
+  }, [isOpen, imageSrc, selectedRatio, currentConfig.width, currentConfig.height]);
 
   // Redraw canvas on zoom, rotation, offset, or image load change
   useEffect(() => {
@@ -2218,7 +2250,7 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, canvas.width, canvas.height);
-  }, [isOpen, zoom, rotation, offsetX, offsetY, renderSize]);
+  }, [isOpen, zoom, rotation, offsetX, offsetY, renderSize, currentConfig]);
 
   // Dragging event handlers (Mouse)
   const handleMouseDown = (e) => {
@@ -2263,7 +2295,7 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
       const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
       if (touchStartDistRef.current > 0) {
         const ratio = dist / touchStartDistRef.current;
-        const newZoom = Math.min(Math.max(touchStartZoomRef.current * ratio, 1.0), 4.0);
+        const newZoom = Math.min(Math.max(touchStartZoomRef.current * ratio, 0.1), 4.0);
         setZoom(newZoom);
       }
     }
@@ -2279,7 +2311,7 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
     e.preventDefault();
     const zoomStep = 0.05;
     const factor = e.deltaY < 0 ? 1 : -1;
-    const newZoom = Math.min(Math.max(zoom + factor * zoomStep, 1.0), 4.0);
+    const newZoom = Math.min(Math.max(zoom + factor * zoomStep, 0.1), 4.0);
     setZoom(newZoom);
   };
 
@@ -2295,14 +2327,41 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
 
   if (!isOpen) return null;
 
+  // Let's calculate the canvas width/height to pass to the canvas element
+  let canvasW = currentConfig.width;
+  let canvasH = currentConfig.height;
+  if (selectedRatio === 'original' && imgRef.current) {
+    const ratio = imgRef.current.width / imgRef.current.height;
+    if (ratio > 1) {
+       canvasW = 640;
+       canvasH = 640 / ratio;
+    } else {
+       canvasH = 640;
+       canvasW = 640 * ratio;
+    }
+  }
+
   return (
     <div className="cropper-modal-overlay">
-      <div className="cropper-modal">
+      <div className="cropper-modal" style={{ maxWidth: '800px', width: '90%' }}>
         <div className="cropper-modal-header">
-          <h3>Crop & Adjust Image (16:9 Aspect Ratio)</h3>
+          <h3>Crop & Adjust Image</h3>
           <button className="cropper-modal-close" onClick={onClose}>&times;</button>
         </div>
         
+        <div style={{ padding: '15px 20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontSize: '14px', fontWeight: 'bold' }}>Card Type / Aspect Ratio:</label>
+          <select 
+            value={selectedRatio} 
+            onChange={(e) => setSelectedRatio(e.target.value)}
+            style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border)', background: '#fff', fontSize: '14px' }}
+          >
+            {Object.entries(ratios).map(([key, config]) => (
+              <option key={key} value={key}>{config.label}</option>
+            ))}
+          </select>
+        </div>
+
         <div 
           className="cropper-canvas-container"
           onMouseDown={handleMouseDown}
@@ -2313,12 +2372,14 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onWheel={handleWheel}
+          style={{ overflow: 'auto', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '380px', padding: '20px' }}
         >
           <canvas 
             ref={canvasRef} 
-            width={640} 
-            height={360} 
+            width={canvasW} 
+            height={canvasH} 
             className="cropper-canvas"
+            style={{ maxWidth: '100%', height: 'auto', maxHeight: '50vh', objectFit: 'contain', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}
           />
         </div>
 
@@ -2327,7 +2388,7 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
             <label>Zoom Slider:</label>
             <input 
               type="range" 
-              min="1.0" 
+              min="0.1" 
               max="4.0" 
               step="0.05"
               value={zoom} 
