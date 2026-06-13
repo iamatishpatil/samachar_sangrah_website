@@ -115,13 +115,8 @@ function ArticleDetail({ articleId, navigate }) {
       </div>
 
       {/* Main Article Content */}
-      <div className="container" style={{ paddingTop: '32px', paddingBottom: '48px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 340px',
-          gap: '32px',
-          alignItems: 'flex-start'
-        }}>
+      <div className="container article-container" style={{ paddingTop: '32px', paddingBottom: '48px' }}>
+        <div className="article-grid">
 
           {/* Left: Full Article */}
           <article style={{
@@ -130,15 +125,17 @@ function ArticleDetail({ articleId, navigate }) {
           }}>
 
             {/* Hero Image */}
-            <Thumbnail
-              imageUrl={article.image_url}
-              category={article.category}
-              heightClass="420px"
-              width="100%"
-            />
+            <div className="article-hero-img">
+              <Thumbnail
+                imageUrl={article.image_url}
+                category={article.category}
+                heightClass="100%"
+                width="100%"
+              />
+            </div>
 
             {/* Article Body */}
-            <div style={{ padding: '32px 36px 40px' }}>
+            <div className="article-body-padding">
               {/* Category + Date */}
               <div style={{
                 display: 'flex', alignItems: 'center',
@@ -196,9 +193,7 @@ function ArticleDetail({ articleId, navigate }) {
               <hr style={{ border: 'none', borderTop: '2px solid #f0f0f0', marginBottom: '28px' }} />
 
               {/* Article Content */}
-              <div style={{
-                fontSize: '18px',
-                lineHeight: '1.9',
+              <div className="article-text-content" style={{
                 color: '#2d3748',
                 fontFamily: 'Noto Sans Kannada, sans-serif',
                 whiteSpace: 'pre-wrap'
@@ -310,8 +305,46 @@ function ArticleDetail({ articleId, navigate }) {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+        
+        .article-grid {
+          display: grid;
+          grid-template-columns: 1fr 340px;
+          gap: 32px;
+          align-items: flex-start;
+        }
+        
+        .article-hero-img {
+          height: 420px;
+          width: 100%;
+        }
+
+        .article-body-padding {
+          padding: 32px 36px 40px;
+        }
+
+        .article-text-content {
+          font-size: 18px;
+          line-height: 1.9;
+        }
+
         @media (max-width: 900px) {
-          article + aside { display: none; }
+          .article-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+          }
+          
+          .article-hero-img {
+            height: 250px;
+          }
+
+          .article-body-padding {
+            padding: 24px 20px 32px;
+          }
+
+          .article-text-content {
+            font-size: 16px;
+            line-height: 1.7;
+          }
         }
       `}</style>
     </div>

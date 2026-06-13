@@ -2317,7 +2317,20 @@ function ImageAdjusterModal({ imageSrc, filename, isOpen, onClose, onApply }) {
 
   const handleSave = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !imgRef.current) return;
+    
+    // Redraw the canvas without the grid overlay
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(canvas.width / 2 + offsetX, canvas.height / 2 + offsetY);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(zoom, zoom);
+    ctx.drawImage(imgRef.current, -renderSize.width / 2, -renderSize.height / 2, renderSize.width, renderSize.height);
+    ctx.restore();
+
     canvas.toBlob((blob) => {
       if (!blob) return;
       const file = new File([blob], filename || 'cropped.jpg', { type: 'image/jpeg' });
