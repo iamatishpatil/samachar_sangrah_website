@@ -628,7 +628,8 @@ function NewsPortal({ navigate, currentCategory, articleId, routeMap }) {
 
         <Sidebar 
           activeCity={activeCity}
-          trendingArticles={articles.slice(0, 5)}
+          trendingArticles={trendingNews.slice(0, 5)}
+          currentAffairsArticles={currentAffairsNews.slice(0, 5)}
           onArticleClick={(art) => handleArticleClick(art.id)}
           poll={poll}
           selectedPollOption={selectedPollOption}

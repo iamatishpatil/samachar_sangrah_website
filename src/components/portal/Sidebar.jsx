@@ -39,6 +39,7 @@ const WEATHER_DATA = {
 function Sidebar({ 
   activeCity = 'ಬೆಂಗಳೂರು',
   trendingArticles = [],
+  currentAffairsArticles = [],
   onArticleClick,
   poll,
   selectedPollOption,
@@ -93,12 +94,12 @@ function Sidebar({
       <div className="widget">
         <div className="widget-head">
           📰 ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನ
-          <span className="widget-head-more" onClick={() => onCategorySelect('ಮುಖಪುಟ')} style={{ cursor: 'pointer' }}>
+          <span className="widget-head-more" onClick={() => onCategorySelect('ಪ್ರಚಲಿತ ವಿದ್ಯಮಾನಗಳು')} style={{ cursor: 'pointer' }}>
             ಎಲ್ಲಾ →
           </span>
         </div>
         <div className="widget-body" style={{ padding: '0' }}>
-          {trendingArticles.slice(0, 5).map((art) => (
+          {currentAffairsArticles.length > 0 ? currentAffairsArticles.map((art) => (
             <div
               key={art.id}
               onClick={() => onArticleClick(art)}
@@ -145,7 +146,7 @@ function Sidebar({
                 </div>
               </div>
             </div>
-          ))}
+          )) : <div style={{ padding: '10px 14px', fontSize: '13px', color: '#888', fontFamily: 'var(--kn-font)' }}>ಯಾವುದೇ ಸುದ್ದಿಗಳಿಲ್ಲ</div>}
         </div>
       </div>
 
@@ -156,20 +157,20 @@ function Sidebar({
       <div className="widget">
         <div className="widget-head">
           🔥 ಟ್ರೆಂಡಿಂಗ್ 
-          <span className="widget-head-more" onClick={() => onCategorySelect('ಮುಖಪುಟ')} style={{ cursor: 'pointer' }}>
+          <span className="widget-head-more" onClick={() => onCategorySelect('ಟ್ರೆಂಡಿಂಗ್')} style={{ cursor: 'pointer' }}>
             ಎಲ್ಲಾ →
           </span>
         </div>
         <div className="widget-body">
-          {trendingArticles.map((art, idx) => (
-            <div key={art.id} className="trend-item" onClick={() => onCategorySelect(art.category)} style={{ cursor: 'pointer' }}>
+          {trendingArticles.length > 0 ? trendingArticles.map((art, idx) => (
+            <div key={art.id} className="trend-item" onClick={() => onArticleClick(art)} style={{ cursor: 'pointer' }}>
               <div className="trend-num" style={{ fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>•</div>
               <div>
                 <div className="trend-title">{art.title}</div>
                 <div className="list-meta">🕐 {new Date(art.created_at).toLocaleDateString('kn-IN')}</div>
               </div>
             </div>
-          ))}
+          )) : <div style={{ padding: '10px 14px', fontSize: '13px', color: '#888', fontFamily: 'var(--kn-font)' }}>ಯಾವುದೇ ಟ್ರೆಂಡಿಂಗ್ ಸುದ್ದಿಗಳಿಲ್ಲ</div>}
         </div>
       </div>
 
