@@ -151,6 +151,11 @@ const initializeDatabase = async () => {
       ALTER TABLE articles ADD COLUMN IF NOT EXISTS views INT DEFAULT 0;
     `);
 
+    // Add extra images columns
+    await pool.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS image_url_2 TEXT;`);
+    await pool.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS image_url_3 TEXT;`);
+    await pool.query(`ALTER TABLE articles ADD COLUMN IF NOT EXISTS image_url_4 TEXT;`);
+
     // Seed default articles if empty
     const articleCheck = await pool.query("SELECT count(*) as count FROM articles");
     if (parseInt(articleCheck.rows[0].count) === 0) {
@@ -384,6 +389,12 @@ const initializeDatabase = async () => {
         is_active INT DEFAULT 1
       )
     `);
+
+    // Add link column if it doesn't exist
+    await pool.query(`
+      ALTER TABLE ticker ADD COLUMN IF NOT EXISTS link TEXT;
+    `);
+
 
     // Seed default ticker messages if empty
     const tickerCheck = await pool.query("SELECT count(*) as count FROM ticker");

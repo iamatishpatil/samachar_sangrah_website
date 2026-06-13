@@ -211,26 +211,55 @@ function ArticleDetail({ articleId, navigate }) {
                 <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
                   ಈ ಸುದ್ದಿ ಉಪಯೋಗಿ ಎಂದನಿಸಿದರೆ ಶೇರ್ ಮಾಡಿ
                 </span>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   {[
                     { label: 'WhatsApp', bg: '#25D366', href: `https://wa.me/?text=${encodeURIComponent(article.title + ' ' + window.location.href)}` },
                     { label: 'Twitter/X', bg: '#000', href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(window.location.href)}` },
-                    { label: 'Facebook', bg: '#1877F2', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}` }
-                  ].map(btn => (
-                    <a
-                      key={btn.label}
-                      href={btn.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        background: btn.bg, color: '#fff', textDecoration: 'none',
-                        padding: '8px 16px', borderRadius: '8px', fontSize: '12px',
-                        fontWeight: 700, transition: 'opacity 0.2s'
-                      }}
-                    >
-                      {btn.label}
-                    </a>
-                  ))}
+                    { label: 'Facebook', bg: '#1877F2', href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}` },
+                    { label: 'Instagram', bg: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)', isNativeShare: true }
+                  ].map(btn => {
+                    if (btn.isNativeShare) {
+                      return (
+                        <button
+                          key={btn.label}
+                          onClick={() => {
+                            if (navigator.share) {
+                              navigator.share({
+                                title: article.title,
+                                text: `Check out this news: ${article.title}`,
+                                url: window.location.href
+                              }).catch(err => console.error("Error sharing:", err));
+                            } else {
+                              navigator.clipboard.writeText(window.location.href);
+                              alert('Link copied to clipboard! You can now paste it in Instagram.');
+                            }
+                          }}
+                          style={{
+                            background: btn.bg, color: '#fff', border: 'none', cursor: 'pointer',
+                            padding: '8px 16px', borderRadius: '8px', fontSize: '12px',
+                            fontWeight: 700, transition: 'opacity 0.2s', fontFamily: 'inherit'
+                          }}
+                        >
+                          {btn.label}
+                        </button>
+                      );
+                    }
+                    return (
+                      <a
+                        key={btn.label}
+                        href={btn.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          background: btn.bg, color: '#fff', textDecoration: 'none',
+                          padding: '8px 16px', borderRadius: '8px', fontSize: '12px',
+                          fontWeight: 700, transition: 'opacity 0.2s', display: 'inline-block'
+                        }}
+                      >
+                        {btn.label}
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             </div>

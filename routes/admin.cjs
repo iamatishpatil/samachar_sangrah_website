@@ -17,24 +17,29 @@ const getImageUrl = (file) => {
 };
 
 // Post news article
-router.post('/news', authenticateToken, upload.single('image'), (req, res) => {
+router.post('/news', authenticateToken, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'image_2', maxCount: 1 }, { name: 'image_3', maxCount: 1 }, { name: 'image_4', maxCount: 1 }]), (req, res) => {
   const { title, content, category, author } = req.body;
-  let image_url = req.body.image_url || 'ph ph-red'; // fallback or placeholder text
+  let image_url = req.body.image_url || 'ph ph-red';
+  let image_url_2 = req.body.image_url_2 || null;
+  let image_url_3 = req.body.image_url_3 || null;
+  let image_url_4 = req.body.image_url_4 || null;
 
   if (!title || !content || !category) {
     return res.status(400).json({ error: 'Title, content, and category are required' });
   }
 
-  // If a file was uploaded, set image_url to the relative file path or cloud url
-  if (req.file) {
-    image_url = getImageUrl(req.file);
+  if (req.files) {
+    if (req.files['image']) image_url = getImageUrl(req.files['image'][0]);
+    if (req.files['image_2']) image_url_2 = getImageUrl(req.files['image_2'][0]);
+    if (req.files['image_3']) image_url_3 = getImageUrl(req.files['image_3'][0]);
+    if (req.files['image_4']) image_url_4 = getImageUrl(req.files['image_4'][0]);
   }
 
   const finalAuthor = author || 'ಸಂಪಾದಕರು';
 
   db.run(
-    'INSERT INTO articles (title, content, category, image_url, author) VALUES (?, ?, ?, ?, ?)',
-    [title, content, category, image_url, finalAuthor],
+    'INSERT INTO articles (title, content, category, image_url, author, image_url_2, image_url_3, image_url_4) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [title, content, category, image_url, finalAuthor, image_url_2, image_url_3, image_url_4],
     function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
@@ -43,10 +48,7 @@ router.post('/news', authenticateToken, upload.single('image'), (req, res) => {
         success: true,
         article: {
           id: this.lastID,
-          title,
-          content,
-          category,
-          image_url,
+          title, content, category, image_url, image_url_2, image_url_3, image_url_4,
           author: finalAuthor,
           created_at: new Date().toISOString()
         }
@@ -83,16 +85,18 @@ router.delete('/news/:id', authenticateToken, (req, res) => {
 
 // Create/Update Ticker tape message
 router.post('/ticker', authenticateToken, (req, res) => {
-  const { message } = req.body;
+  const { message, link } = req.body;
   if (!message) {
     return res.status(400).json({ error: 'Ticker message is required' });
   }
 
-  db.run('INSERT INTO ticker (message, is_active) VALUES (?, 1)', [message], function(err) {
+  const finalLink = link || null;
+
+  db.run('INSERT INTO ticker (message, link, is_active) VALUES (?, ?, 1)', [message, finalLink], function(err) {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    res.json({ success: true, item: { id: this.lastID, message, is_active: 1 } });
+    res.json({ success: true, item: { id: this.lastID, message, link: finalLink, is_active: 1 } });
   });
 });
 
@@ -325,10 +329,13 @@ router.delete('/photos/:id', authenticateToken, (req, res) => {
 });
 
 // Update news article
-router.put('/news/:id', authenticateToken, upload.single('image'), (req, res) => {
+router.put('/news/:id', authenticateToken, upload.fields([{ name: 'image', maxCount: 1 }, { name: 'image_2', maxCount: 1 }, { name: 'image_3', maxCount: 1 }, { name: 'image_4', maxCount: 1 }]), (req, res) => {
   const { id } = req.params;
   const { title, content, category, author } = req.body;
   let image_url = req.body.image_url;
+  let image_url_2 = req.body.image_url_2;
+  let image_url_3 = req.body.image_url_3;
+  let image_url_4 = req.body.image_url_4;
 
   if (!title || !content || !category) {
     return res.status(400).json({ error: 'Title, content, and category are required' });
@@ -336,52 +343,25 @@ router.put('/news/:id', authenticateToken, upload.single('image'), (req, res) =>
 
   const finalAuthor = author || 'ಸಂಪಾದಕರು';
 
-  const performUpdate = (finalImageUrl) => {
-    const sql = finalImageUrl 
-      ? 'UPDATE articles SET title = ?, content = ?, category = ?, image_url = ?, author = ? WHERE id = ?'
-      : 'UPDATE articles SET title = ?, content = ?, category = ?, author = ? WHERE id = ?';
-    
-    const params = finalImageUrl
-      ? [title, content, category, finalImageUrl, finalAuthor, id]
-      : [title, content, category, finalAuthor, id];
-
-    db.run(sql, params, function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.json({
-        success: true,
-        message: 'Article updated successfully',
-        article: {
-          id: parseInt(id),
-          title,
-          content,
-          category,
-          image_url: finalImageUrl || undefined,
-          author: finalAuthor
-        }
-      });
-    });
-  };
-
-  const newFileUploaded = !!req.file;
-  const switchedToPlaceholder = image_url && image_url.startsWith('ph ph-');
-
-  if (newFileUploaded || switchedToPlaceholder) {
-    db.get('SELECT image_url FROM articles WHERE id = ?', [id], (err, row) => {
-      if (!err && row && row.image_url && row.image_url.startsWith('/uploads/')) {
-        const oldImagePath = path.join(__dirname, '../public', row.image_url);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
-        }
-      }
-      
-      const nextImageUrl = newFileUploaded ? getImageUrl(req.file) : image_url;
-      performUpdate(nextImageUrl);
-    });
-  } else {
-    performUpdate(image_url);
+  if (req.files) {
+    if (req.files['image']) image_url = getImageUrl(req.files['image'][0]);
+    if (req.files['image_2']) image_url_2 = getImageUrl(req.files['image_2'][0]);
+    if (req.files['image_3']) image_url_3 = getImageUrl(req.files['image_3'][0]);
+    if (req.files['image_4']) image_url_4 = getImageUrl(req.files['image_4'][0]);
   }
+
+  const sql = 'UPDATE articles SET title = ?, content = ?, category = ?, author = ?, image_url = COALESCE(?, image_url), image_url_2 = COALESCE(?, image_url_2), image_url_3 = COALESCE(?, image_url_3), image_url_4 = COALESCE(?, image_url_4) WHERE id = ?';
+  const params = [title, content, category, finalAuthor, image_url, image_url_2, image_url_3, image_url_4, id];
+
+  db.run(sql, params, function(err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json({
+      success: true,
+      message: 'Article updated successfully'
+    });
+  });
 });
 
 // Get real-time database analytics

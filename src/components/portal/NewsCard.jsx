@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Shared thumbnail rendering engine with customizable width and height
 export const Thumbnail = ({ imageUrl, category, heightClass, width = "100%", objectFit = "cover", aspectRatio }) => {
@@ -25,6 +25,50 @@ export const Thumbnail = ({ imageUrl, category, heightClass, width = "100%", obj
   );
 };
 
+// Internal carousel for a single article's multiple images
+function HeroImageCarousel({ article }) {
+  const images = [article.image_url, article.image_url_2, article.image_url_3, article.image_url_4].filter(Boolean);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [images.length]);
+
+  const currentImage = images[currentIndex] || article.image_url;
+
+  return (
+    <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9' }}>
+      <Thumbnail imageUrl={currentImage} category={article.category} heightClass="100%" width="100%" />
+      {images.length > 1 && (
+        <div style={{ position: 'absolute', bottom: '15px', right: '15px', display: 'flex', gap: '8px', zIndex: 10 }}>
+          {images.map((_, idx) => (
+            <div 
+              key={idx} 
+              style={{ 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                background: idx === currentIndex ? '#fff' : 'rgba(255,255,255,0.4)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.5)',
+                cursor: 'pointer',
+                transition: 'background 0.3s'
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentIndex(idx);
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function NewsCard({ article, type = "side", heightClass, onClick }) {
   if (!article) return null;
 
@@ -34,7 +78,7 @@ function NewsCard({ article, type = "side", heightClass, onClick }) {
   if (type === 'hero') {
     return (
       <div className="hero-card" onClick={onClick} style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
-        <Thumbnail imageUrl={article.image_url} category={article.category} heightClass={null} width="100%" aspectRatio="16/9" />
+        <HeroImageCarousel article={article} />
         <div className="hero-body" style={{ padding: '15px 0' }}>
           <div className="badge-cat" style={{ marginBottom: '10px' }}>{article.category}</div>
           <div className="hero-title" style={{ color: '#111' }}>{article.title}</div>

@@ -10,7 +10,13 @@ function Ticker({ tickerItems }) {
         <div className="ticker-track">
           <div className="ticker-tape">
             {tickerItems.map(item => (
-              <span key={item.id} className="ticker-item">{item.message}</span>
+              item.link ? (
+                <a key={item.id} href={item.link} className="ticker-item" style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
+                  {item.message}
+                </a>
+              ) : (
+                <span key={item.id} className="ticker-item">{item.message}</span>
+              )
             ))}
           </div>
         </div>

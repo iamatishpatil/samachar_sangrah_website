@@ -30,12 +30,16 @@ function AdminDashboard({ navigate }) {
   const [newsCategory, setNewsCategory] = useState('ರಾಜ್ಯ');
   const [newsAuthor, setNewsAuthor] = useState('');
   const [newsImageFile, setNewsImageFile] = useState(null);
+  const [newsImageFile2, setNewsImageFile2] = useState(null);
+  const [newsImageFile3, setNewsImageFile3] = useState(null);
+  const [newsImageFile4, setNewsImageFile4] = useState(null);
   const [newsImagePlaceholder, setNewsImagePlaceholder] = useState('ph ph-red');
   const [newsMsg, setNewsMsg] = useState({ text: '', type: '' });
   const [newsSearch, setNewsSearch] = useState('');
 
   // Ticker Form
   const [tickerText, setTickerText] = useState('');
+  const [tickerLink, setTickerLink] = useState('');
   const [tickerMsg, setTickerMsg] = useState({ text: '', type: '' });
 
   // Video Form
@@ -90,6 +94,9 @@ function AdminDashboard({ navigate }) {
   const [editNewsCategory, setEditNewsCategory] = useState('ರಾಜ್ಯ');
   const [editNewsAuthor, setEditNewsAuthor] = useState('');
   const [editNewsImageFile, setEditNewsImageFile] = useState(null);
+  const [editNewsImageFile2, setEditNewsImageFile2] = useState(null);
+  const [editNewsImageFile3, setEditNewsImageFile3] = useState(null);
+  const [editNewsImageFile4, setEditNewsImageFile4] = useState(null);
   const [editNewsImagePlaceholder, setEditNewsImagePlaceholder] = useState('ph ph-red');
   const [editNewsImageSource, setEditNewsImageSource] = useState('keep'); // 'keep', 'placeholder', 'upload'
   const [editNewsMsg, setEditNewsMsg] = useState({ text: '', type: '' });
@@ -248,6 +255,9 @@ function AdminDashboard({ navigate }) {
     } else {
       formData.append('image_url', newsImagePlaceholder);
     }
+    if (newsImageFile2) formData.append('image_2', newsImageFile2);
+    if (newsImageFile3) formData.append('image_3', newsImageFile3);
+    if (newsImageFile4) formData.append('image_4', newsImageFile4);
 
     fetch('/api/admin/news', {
       method: 'POST',
@@ -265,6 +275,9 @@ function AdminDashboard({ navigate }) {
           setNewsContent('');
           setNewsAuthor('');
           setNewsImageFile(null);
+          setNewsImageFile2(null);
+          setNewsImageFile3(null);
+          setNewsImageFile4(null);
           // Reload
           loadDashboardData();
         }
@@ -299,6 +312,25 @@ function AdminDashboard({ navigate }) {
       // Keep existing image
       formData.append('image_url', editingArticle.image_url);
     }
+    
+    // Handle optional extra images
+    if (editNewsImageFile2) {
+      formData.append('image_2', editNewsImageFile2);
+    } else if (editingArticle.image_url_2) {
+      formData.append('image_url_2', editingArticle.image_url_2);
+    }
+
+    if (editNewsImageFile3) {
+      formData.append('image_3', editNewsImageFile3);
+    } else if (editingArticle.image_url_3) {
+      formData.append('image_url_3', editingArticle.image_url_3);
+    }
+
+    if (editNewsImageFile4) {
+      formData.append('image_4', editNewsImageFile4);
+    } else if (editingArticle.image_url_4) {
+      formData.append('image_url_4', editingArticle.image_url_4);
+    }
 
     fetch(`/api/admin/news/${editingArticle.id}`, {
       method: 'PUT',
@@ -318,6 +350,9 @@ function AdminDashboard({ navigate }) {
             setEditNewsContent('');
             setEditNewsAuthor('');
             setEditNewsImageFile(null);
+            setEditNewsImageFile2(null);
+            setEditNewsImageFile3(null);
+            setEditNewsImageFile4(null);
             setEditNewsMsg({ text: '', type: '' });
           }, 1000);
           // Reload
@@ -357,7 +392,7 @@ function AdminDashboard({ navigate }) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ message: tickerText })
+      body: JSON.stringify({ message: tickerText, link: tickerLink })
     })
       .then(res => res.json())
       .then(data => {
@@ -366,6 +401,7 @@ function AdminDashboard({ navigate }) {
         } else {
           setTickerMsg({ text: '✅ Ticker message added!', type: 'success' });
           setTickerText('');
+          setTickerLink('');
           loadDashboardData();
         }
       });
@@ -1467,6 +1503,27 @@ function AdminDashboard({ navigate }) {
                         )}
                       </div>
                     </div>
+
+                    <div className="admin-form-group">
+                      <label>Additional Carousel Images (Optional)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>2nd Image</label>
+                          <input type="file" className="admin-input" accept="image/*" onChange={(e) => setEditNewsImageFile2(e.target.files[0] || null)} />
+                          {editingArticle.image_url_2 && !editNewsImageFile2 && <div style={{fontSize: '11px', color: '#666', marginTop: '4px'}}>Current exists</div>}
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>3rd Image</label>
+                          <input type="file" className="admin-input" accept="image/*" onChange={(e) => setEditNewsImageFile3(e.target.files[0] || null)} />
+                          {editingArticle.image_url_3 && !editNewsImageFile3 && <div style={{fontSize: '11px', color: '#666', marginTop: '4px'}}>Current exists</div>}
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>4th Image</label>
+                          <input type="file" className="admin-input" accept="image/*" onChange={(e) => setEditNewsImageFile4(e.target.files[0] || null)} />
+                          {editingArticle.image_url_4 && !editNewsImageFile4 && <div style={{fontSize: '11px', color: '#666', marginTop: '4px'}}>Current exists</div>}
+                        </div>
+                      </div>
+                    </div>
                     
                     <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
                       <button className="admin-btn" type="submit" style={{ flex: 1 }}>
@@ -1597,6 +1654,24 @@ function AdminDashboard({ navigate }) {
                         )}
                       </div>
                     </div>
+
+                    <div className="admin-form-group">
+                      <label>Additional Carousel Images (Optional)</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>2nd Image</label>
+                          <input type="file" className="admin-input" accept="image/*" onChange={(e) => setNewsImageFile2(e.target.files[0] || null)} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>3rd Image</label>
+                          <input type="file" className="admin-input" accept="image/*" onChange={(e) => setNewsImageFile3(e.target.files[0] || null)} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '12px' }}>4th Image</label>
+                          <input type="file" className="admin-input" accept="image/*" onChange={(e) => setNewsImageFile4(e.target.files[0] || null)} />
+                        </div>
+                      </div>
+                    </div>
                     
                     <button className="admin-btn" type="submit" style={{ marginTop: '10px' }}>
                       Publish News 🚀
@@ -1694,6 +1769,16 @@ function AdminDashboard({ navigate }) {
                     placeholder="ಬಜೆಟ್ ಮಂಡನೆ ಮಾರ್ಚ್ 7 ರಂದು..."
                   />
                 </div>
+                <div className="admin-form-group">
+                  <label>Link / URL (Optional) - Opens when clicked</label>
+                  <input 
+                    className="admin-input" 
+                    type="text" 
+                    value={tickerLink} 
+                    onChange={(e) => setTickerLink(e.target.value)} 
+                    placeholder="https://... or /article/123"
+                  />
+                </div>
                 <button className="admin-btn" type="submit">Add Ticker Line 🔴</button>
               </form>
             </div>
@@ -1705,6 +1790,7 @@ function AdminDashboard({ navigate }) {
                 <thead>
                   <tr>
                     <th>Message</th>
+                    <th>Link</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -1712,6 +1798,13 @@ function AdminDashboard({ navigate }) {
                   {tickerItems.map(item => (
                     <tr key={item.id}>
                       <td>{item.message}</td>
+                      <td>
+                        {item.link ? (
+                          <a href={item.link} target="_blank" rel="noopener noreferrer" style={{color: 'var(--admin-accent)', fontSize: '12px'}}>🔗 Link</a>
+                        ) : (
+                          <span style={{color: '#94a3b8', fontSize: '12px'}}>None</span>
+                        )}
+                      </td>
                       <td>
                         <button className="admin-btn-danger" onClick={() => handleDeleteTicker(item.id)} style={{ padding: '4px 8px', fontSize: '11px' }}>
                           Delete

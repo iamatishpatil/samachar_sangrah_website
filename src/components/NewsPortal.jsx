@@ -7,17 +7,85 @@ import NewsCard, { Thumbnail } from './portal/NewsCard';
 import Sidebar from './portal/Sidebar';
 import Footer from './portal/Footer';
 
+const getEmbedUrl = (url) => {
+  if (!url) return '';
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('v')) {
+      return `https://www.youtube.com/embed/${urlObj.searchParams.get('v')}?autoplay=1`;
+    }
+    if (urlObj.hostname.includes('youtu.be')) {
+      return `https://www.youtube.com/embed${urlObj.pathname}?autoplay=1`;
+    }
+    if (urlObj.hostname.includes('instagram.com')) {
+      let base = url.split('?')[0];
+      if (!base.endsWith('/')) base += '/';
+      return base + 'embed';
+    }
+    if (urlObj.hostname.includes('facebook.com') && url.includes('/videos/')) {
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false&autoplay=1`;
+    }
+  } catch(e) {}
+  return url;
+};
+
 /* ── Reel Card Component ── */
 function ReelCard({ reel }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const embedUrl = getEmbedUrl(reel.video_url);
+
   return (
-    <a href={reel.video_url} target="_blank" rel="noopener noreferrer" className="reel-card" style={{ display: 'block', textDecoration: 'none' }}>
-      <Thumbnail imageUrl={reel.image_url} category="🎬" heightClass="100%" />
-      <div className="reel-overlay">
-        <div className="reel-play">▶</div>
-        {reel.duration && <div className="reel-dur">{reel.duration}</div>}
-      </div>
-      <div className="reel-title">{reel.title}</div>
-    </a>
+    <div className="reel-card" style={{ display: 'block', position: 'relative' }}>
+      {isPlaying ? (
+        <div style={{ width: '100%', height: '100%', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+          <iframe 
+            src={embedUrl} 
+            width="100%" 
+            height="100%" 
+            style={{ border: 'none', width: '100%', height: '100%', minHeight: '300px' }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowFullScreen
+          />
+        </div>
+      ) : (
+        <div onClick={() => setIsPlaying(true)} style={{ cursor: 'pointer', width: '100%', height: '100%' }}>
+          <Thumbnail imageUrl={reel.image_url} category="🎬" heightClass="100%" />
+          <div className="reel-overlay">
+            <div className="reel-play">▶</div>
+            {reel.duration && <div className="reel-dur">{reel.duration}</div>}
+          </div>
+          <div className="reel-title">{reel.title}</div>
+        </div>
+      )}
+      
+      {/* Social Media redirect button overlay */}
+      <a 
+        href={reel.video_url} 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          background: 'rgba(0,0,0,0.65)',
+          color: '#fff',
+          padding: '6px 12px',
+          borderRadius: '20px',
+          fontSize: '11px',
+          textDecoration: 'none',
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          zIndex: 10,
+          backdropFilter: 'blur(4px)',
+          border: '1px solid rgba(255,255,255,0.2)'
+        }}
+        title="Open in App"
+      >
+        <span style={{ fontSize: '14px' }}>🔗</span> ಓಪನ್ (Open)
+      </a>
+    </div>
   );
 }
 
